@@ -2,11 +2,7 @@ spring:
   application:
     name: chat-service
   config:
-    import: configserver:${CONFIG_SERVER_URL:http://localhost:8888}
-  cloud:
-    config:
-      username: ${CONFIG_SERVER_USERNAME}
-      password: ${CONFIG_SERVER_PASSWORD}
+    import: configserver:${CONFIG_SERVER_URL:http://${CONFIG_SERVER_USERNAME}:${CONFIG_SERVER_PASSWORD}@localhost:8888}
   websocket:
     servlet:
       max-text-message-size: 16384
