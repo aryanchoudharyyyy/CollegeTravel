@@ -1,15 +1,19 @@
 import { useEffect, useState, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
-import { ShieldCheck, ArrowRight, Compass } from "lucide-react";
+import { ShieldCheck, Compass } from "lucide-react";
 import "../styles/Auth.css";
+import { verifyOtp } from "../api/authApi";
 
 function OtpVerification() {
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [timer, setTimer] = useState(30);
   const inputRefs = useRef([]);
   const navigate = useNavigate();
-  const { setIsLoggedIn, setUser, email } = useAuth();
+  const { setIsLoggedIn, setUser } = useAuth();
+  const location = useLocation();
+  const collegeEmail = location.state?.collegeEmail;
+  console.log("College Email:", collegeEmail);
 
   useEffect(() => {
     if (timer > 0) {
@@ -42,15 +46,27 @@ function OtpVerification() {
     }
   };
 
-  function handleVerify(e) {
+async  function handleVerify(e) {
     e.preventDefault();
-    // Derive a display name from the email (e.g., "aryan.sharma@college.edu" → "Aryan")
-    const nameFromEmail = email
-      ? email.split("@")[0].split(".")[0].replace(/^\w/, c => c.toUpperCase())
-      : "You";
-    setUser({ id: 1, name: nameFromEmail, email });
+    const otpValue = otp.join("");
+
+    
+  try {
+    const response = await verifyOtp(collegeEmail,otpValue);
+    
+    // AuthContext me user ko logged in mark karein
     setIsLoggedIn(true);
+    
+    // Tokens ko localStorage me save karein (agar backend tokens bhej raha hai)
+    if(response.data?.accessToken) {
+        localStorage.setItem("accessToken", response.data.accessToken);
+    }
+    
     navigate("/home");
+  } catch (error) {
+    console.log(error.response?.data);
+  }
+    
   }
 
   return (

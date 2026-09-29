@@ -5,22 +5,22 @@ import { sendOtp } from "../api/authApi";
 import "../styles/Auth.css";
 
 function Login() {
-  const [email, setEmail] = useState("");
+  const [collegeEmail, setCollegeEmail] = useState("");
   const [error, setError] = useState("");
   const navigate = useNavigate();
 
 async function handleSubmit(e) {
     e.preventDefault();
-     if (!email.includes("@")) {
+     if (!collegeEmail.includes("@")) {
         setError("Please enter a valid college email address!");
         return;
     }
     try {
       setError("");
-      const response = await sendOtp(email);
+      const response = await sendOtp(collegeEmail);
       console.log("OTP sent:", response.data);
       navigate("/otpVerification", {
-        state: { email }
+        state: { collegeEmail }
       });
       
     } catch (error) {
@@ -76,8 +76,8 @@ async function handleSubmit(e) {
                   type="email"
                   className="auth-input"
                   placeholder="e.g., aman.sharma@college.edu"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  value={collegeEmail}
+                  onChange={(e) => setCollegeEmail(e.target.value)}
                   required
                 />
               </div>
