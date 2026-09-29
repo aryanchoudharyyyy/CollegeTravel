@@ -9,5 +9,8 @@ export const sendOtp = (collegeEmail) => {
     return apiClient.post("api/users/login", {collegeEmail});
 };
 
+export const verifyOtp = (collegeEmail, otp) => {
+    return apiClient.post("api/users/verify-otp", {collegeEmail, otp});
+};
 
 

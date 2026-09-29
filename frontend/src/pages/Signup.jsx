@@ -9,10 +9,12 @@ function Signup() {
   const [collegeEmail, setCollegeEmail] = useState("");
   const [branch, setBranch] = useState("");
   const [year, setYear] = useState("");
+  const [errorMsg, setErrorMsg] = useState("");
   const navigate = useNavigate();
 
 async  function handleSubmit(e) {
     e.preventDefault();
+    setErrorMsg("");
    try {
     const response = await signup({
       name, collegeEmail, branch, year
@@ -20,14 +22,13 @@ async  function handleSubmit(e) {
      
     console.log("Signup successfull "+ response.data);
     navigate("/otpVerification", {
-      state: collegeEmail
+      state: {collegeEmail}
     });
    } catch (error) {
-            console.log("Signup failed:", error);
-
-        // temporarily just see the backend error
-        console.log(error.response?.data);
-
+        console.log("Signup failed:", error);
+        // Error ko screen par dikhane ke liye state me set karein
+        const backendError = error.response?.data?.message || "Account already exists or something went wrong.";
+        setErrorMsg(backendError);
    }
   }
 
@@ -60,6 +61,12 @@ async  function handleSubmit(e) {
             <h1>Create Account</h1>
             <p>Join your campus travel community</p>
           </div>
+
+          {errorMsg && (
+            <div style={{ color: "red", backgroundColor: "#ffe6e6", padding: "10px", borderRadius: "5px", marginBottom: "15px", textAlign: "center", fontSize: "14px" }}>
+              {errorMsg}
+            </div>
+          )}
 
           {/* Form */}
           <form className="auth-form" onSubmit={handleSubmit}>
