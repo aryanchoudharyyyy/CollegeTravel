@@ -1,4 +1,4 @@
-package com.SquadStation.api_gateway.config;
+package com.CollegeTravel.api_gateway.config;
 
 import jakarta.validation.constraints.Max;
 import org.springframework.web.filter.CorsFilter;
