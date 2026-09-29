@@ -1,4 +1,4 @@
-CREATE DATABASE collegetarvel_users;
+CREATE DATABASE collegetravel_users;
 CREATE DATABASE collegetravel_trips;
 CREATE DATABASE collegetravel_groups;
 CREATE DATABASE collegetravel_chat;
