@@ -2,23 +2,33 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { User, Mail, BookOpen, Calendar, ArrowRight, Compass } from "lucide-react";
 import "../styles/Auth.css";
+import { signup } from "../api/authApi";
 
 function Signup() {
   const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
+  const [collegeEmail, setCollegeEmail] = useState("");
   const [branch, setBranch] = useState("");
   const [year, setYear] = useState("");
   const navigate = useNavigate();
 
-  function handleSubmit(e) {
+async  function handleSubmit(e) {
     e.preventDefault();
-    console.log("Name: ", name);
-    console.log("Email: ", email);
-    console.log("Branch: ", branch);
-    console.log("Year: ", year);
-    
-    // Redirect to OTP verification after signup
-    navigate("/otpVerification");
+   try {
+    const response = await signup({
+      name, collegeEmail, branch, year
+    });
+     
+    console.log("Signup successfull "+ response.data);
+    navigate("/otpVerification", {
+      state: collegeEmail
+    });
+   } catch (error) {
+            console.log("Signup failed:", error);
+
+        // temporarily just see the backend error
+        console.log(error.response?.data);
+
+   }
   }
 
   return (
@@ -76,8 +86,8 @@ function Signup() {
                   type="email"
                   className="auth-input"
                   placeholder="e.g., aman.sharma@college.edu"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  value={collegeEmail}
+                  onChange={(e) => setCollegeEmail(e.target.value)}
                   required
                 />
               </div>
