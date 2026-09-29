@@ -2,11 +2,12 @@ spring:
   application:
     name: Group-service
   config:
-    import: configserver:${CONFIG_SERVER_URL:http://localhost:8888}
+    import: configserver:${CONFIG_SERVER_URL:http://${CONFIG_SERVER_USERNAME}:${CONFIG_SERVER_PASSWORD}@localhost:8888}
   cloud:
     config:
       username: ${CONFIG_SERVER_USERNAME}
       password: ${CONFIG_SERVER_PASSWORD}
+      
 server:
   port: 8084
 
@@ -61,3 +62,4 @@ feign:
       user-service:
         connect-timeout: 2000
         read-timeout: 2000
+
