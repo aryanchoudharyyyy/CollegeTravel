@@ -13,4 +13,6 @@ export const verifyOtp = (collegeEmail, otp) => {
     return apiClient.post("api/users/verify-otp", {collegeEmail, otp});
 };
 
-
+export const getCurrentUser = () =>{
+    return apiClient.get("api/users/me");
+}
