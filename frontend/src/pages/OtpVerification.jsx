@@ -4,6 +4,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { ShieldCheck, Compass } from "lucide-react";
 import "../styles/Auth.css";
 import { verifyOtp } from "../api/authApi";
+import { setTokens } from "../utils/token";
 
 function OtpVerification() {
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
@@ -57,9 +58,9 @@ async  function handleVerify(e) {
     // AuthContext me user ko logged in mark karein
     setIsLoggedIn(true);
     
-    // Tokens ko localStorage me save karein (agar backend tokens bhej raha hai)
-    if(response.data?.accessToken) {
-        localStorage.setItem("accessToken", response.data.accessToken);
+    // Tokens ko save karein using our setTokens utility
+    if (response.data?.accessToken && response.data?.refreshToken) {
+        setTokens(response.data.accessToken, response.data.refreshToken);
     }
     
     navigate("/home");
