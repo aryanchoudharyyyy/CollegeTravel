@@ -1,28 +1,35 @@
 package com.CollegeTravel.api_gateway.config;
 
-import jakarta.validation.constraints.Max;
-import org.springframework.web.filter.CorsFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.web.filter.CorsFilter;
 
 import java.util.List;
 
 @Configuration
 public class CorsConfig {
+
     @Bean
-    public CorsFilter corsFilter(){
+    public CorsFilter corsFilter() {
+
         CorsConfiguration config = new CorsConfiguration();
+
         config.setAllowedOrigins(
                 List.of("http://localhost:5173")
         );
+
         config.setAllowedMethods(
                 List.of(
-                        "GET","POST", "PUT", "DELETE", "OPTIONS"
+                        "GET",
+                        "POST",
+                        "PUT",
+                        "DELETE",
+                        "OPTIONS"
                 )
-
         );
+
         config.setAllowedHeaders(
                 List.of("*")
         );
@@ -36,5 +43,4 @@ public class CorsConfig {
 
         return new CorsFilter(source);
     }
-
 }
