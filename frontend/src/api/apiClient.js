@@ -1,6 +1,5 @@
 import axios from "axios";
 import { getAccessToken, getRefreshToken, setTokens, clearTokens } from "../utils/token";
-import { response } from "express";
 
 const apiClient = axios.create({
     baseURL: import.meta.env.VITE_API_BASE_URL,

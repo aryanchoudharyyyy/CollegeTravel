@@ -16,3 +16,7 @@ export const verifyOtp = (collegeEmail, otp) => {
 export const getCurrentUser = () =>{
     return apiClient.get("api/users/me");
 }
+export const logout = (refreshToken) =>{
+    return apiClient.post("api/users/logout", {refreshToken});
+
+};

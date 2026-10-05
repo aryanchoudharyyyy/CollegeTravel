@@ -1,7 +1,6 @@
 import { createContext, useState, useContext, useEffect } from "react";
 import { getAccessToken } from "../utils/token";
 import { getCurrentUser } from "../api/authApi";
-import { response } from "express";
 const AuthContext = createContext();
 export function AuthProvider({ children }){
     const [isLoggedIn, setIsLoggedIn] = useState(!!getAccessToken());

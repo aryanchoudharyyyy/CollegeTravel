@@ -3,6 +3,9 @@ import { useAuth } from "../contexts/AuthContext";
 import { Ticket, User, Settings, LogOut, ChevronDown} from "lucide-react";
 import "../styles/Navbar.css";
 import { useState, useEffect, useRef } from "react";
+import { getRefreshToken, clearTokens } from "../utils/token";
+import { logout } from "../api/authApi";
+
 
 
 function Navbar(){
@@ -10,9 +13,16 @@ function Navbar(){
     const navigate = useNavigate();
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const dropdownRef = useRef(null);
-    function handleLogout(){
-        setIsLoggedIn(false);
-        navigate("/login");
+async function handleLogout(){
+        try {
+            const refreshToken = getRefreshToken();
+            await logout(refreshToken);
+            clearTokens();
+            setIsLoggedIn(false);
+            navigate("/login");
+        } catch (error) {
+            console.log("Logout failed:", error.response?.data);
+        }
     }
 
     useEffect(()=>{
