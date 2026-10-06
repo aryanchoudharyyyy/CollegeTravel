@@ -25,7 +25,6 @@ public class TripController {
         Long userId = (Long) request.getAttribute("userId");
         Trip trip = new Trip();
         trip.setUserId(userId);
-        trip.setMode(tripRequest.mode());
         trip.setSourcePoint(tripRequest.sourcePoint());
         trip.setBoardingStation(tripRequest.boardingStation());
         trip.setDestination(tripRequest.destination());

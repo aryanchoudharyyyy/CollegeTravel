@@ -9,7 +9,6 @@ import jakarta.validation.constraints.Size;
 import java.time.LocalDateTime;
 
 public record CreateTripRequest(
-        @NotNull TravelMode mode,
         @NotBlank @Size(max = 150) String sourcePoint,
         @NotBlank @Size(max = 150) String boardingStation,
         @Size(max = 150) String destination,
