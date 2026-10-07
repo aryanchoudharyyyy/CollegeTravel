@@ -2,15 +2,55 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { MapPin, Calendar, Clock, Hash, ChevronRight, Navigation, ArrowRight } from "lucide-react";
 import "../styles/PostTrip.css";
+import { postTrip } from "../api/tripApi";
 
 function PostTrip() {
   const navigate = useNavigate();
+  const [sourcePoint, setSourcePoint] = useState("");
+  const [boardingStation, setBoardingStation] = useState("");
+  const [destination, setDestination] = useState("");
+  const [travelDate, setTravelDate] = useState("");
+  const [travelTime, setTravelTime] = useState("");
+  const [ampm, setAmpm] = useState("AM");
+  const [vehicleNumber, setVehicleNumber] = useState("");
 
-  const handleSubmit = (e) => {
+const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("Trip submitted! Redirecting to Trip Matches...");
+    // console.log("Trip submitted! Redirecting to Trip Matches...");
+    const tripData = {
+      sourcePoint,
+      boardingStation,
+      destination,
+      travelDateTime : getTravelDateTime(),
+      vehicleNumber
+    };
+    console.log("TRIP DATA:", tripData);
+    try {
+      const response = await postTrip(tripData);
+      console.log("Trip posted successfully", response.data);
+      const matches = response.data.immediateMatches;
+      navigate("/trip-matches", {
+        state: {
+          matches
+        }
+      });
+      
+    } catch (error) {
+      console.log("Failed to post trip", error.response?.data);
+    }
     // After API is connected, we will navigate to matches with the trip ID
-    navigate("/trip-matches");
+  
+  };
+  const getTravelDateTime = () =>{
+    let [hours, minutes]  = travelTime.split(":").map(Number);
+    if(ampm == "PM" && hours!=12){
+      hours+=12;
+
+    }
+    if(ampm =="AM" && hours!=12){
+      hours=0;
+    }
+    return `${travelDate}T${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:00`;
   };
 
   return (
@@ -43,7 +83,8 @@ function PostTrip() {
                 <label className="pt-label">Source Point (Start)</label>
                 <div className="pt-input-wrapper">
                   <MapPin size={18} className="pt-input-icon text-blue" />
-                  <input type="text" placeholder="e.g., KIET Gate" className="pt-input" required />
+                  <input type="text" placeholder="e.g., KIET Gate" className="pt-input" required
+                  value={sourcePoint} onChange={(e) => setSourcePoint(e.target.value)} />
                 </div>
               </div>
 
@@ -55,7 +96,8 @@ function PostTrip() {
                 <label className="pt-label">Boarding Station</label>
                 <div className="pt-input-wrapper">
                   <Navigation size={18} className="pt-input-icon text-orange" />
-                  <input type="text" placeholder="e.g., Ghaziabad Railway Station" className="pt-input" required />
+                  <input type="text" placeholder="e.g., Ghaziabad Railway Station" className="pt-input" required
+                  value={boardingStation} onChange={(e)=> setBoardingStation(e.target.value)} />
                 </div>
               </div>
             </div>
@@ -64,7 +106,8 @@ function PostTrip() {
               <label className="pt-label">Final Destination <span className="pt-optional">(Optional)</span></label>
               <div className="pt-input-wrapper">
                 <MapPin size={18} className="pt-input-icon text-green" />
-                <input type="text" placeholder="e.g., Mumbai Central" className="pt-input" />
+                <input type="text" placeholder="e.g., Mumbai Central" className="pt-input" 
+                value={destination} onChange={(e) => setDestination(e.target.value)}/>
               </div>
             </div>
           </div>
@@ -80,7 +123,8 @@ function PostTrip() {
                 <label className="pt-label">Travel Date</label>
                 <div className="pt-input-wrapper">
                   <Calendar size={18} className="pt-input-icon text-blue" />
-                  <input type="date" className="pt-input" required />
+                  <input type="date" className="pt-input" required 
+                  value={travelDate} onChange={(e) => setTravelDate(e.target.value)}/>
                 </div>
               </div>
 
@@ -89,11 +133,15 @@ function PostTrip() {
                 <div style={{ display: 'flex', gap: '8px' }}>
                   <div className="pt-input-wrapper" style={{ flex: 1 }}>
                     <Clock size={18} className="pt-input-icon text-orange" />
-                    <input type="text" placeholder="hh:mm" className="pt-input" required />
-                  </div>
-                  <select className="pt-input" style={{ width: '80px', padding: '0 12px', cursor: 'pointer', appearance: 'none', textAlign: 'center' }}>
+                    <input type="text" placeholder="hh:mm" className="pt-input" required 
+                    value={travelTime} onChange={(e)=> setTravelTime(e.target.value)}/>
+                  </div> 
+                  <select className="pt-input" style={{ width: '80px', padding: '0 12px', cursor: 'pointer', appearance: 'none', textAlign: 'center' }}
+                  value={ampm}
+                  onChange={(e)=> setAmpm(e.target.value)}>
                     <option value="AM">AM</option>
                     <option value="PM">PM</option>
+                    
                   </select>
                 </div>
               </div>
@@ -103,7 +151,8 @@ function PostTrip() {
               <label className="pt-label">Vehicle/Train No. <span className="pt-optional">(Optional)</span></label>
               <div className="pt-input-wrapper">
                 <Hash size={18} className="pt-input-icon text-gray" />
-                <input type="text" placeholder="e.g., 12951" className="pt-input" />
+                <input type="text" placeholder="e.g., 12951" className="pt-input"
+                value={vehicleNumber} onChange={(e) =>setVehicleNumber(e.target.value)} />
               </div>
             </div>
           </div>
