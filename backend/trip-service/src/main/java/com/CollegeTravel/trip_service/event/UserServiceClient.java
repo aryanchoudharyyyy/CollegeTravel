@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import java.util.List;
 import java.util.Map;
 
-@FeignClient(name = "user-service")
+@FeignClient(name = "user-service", contextId = "userServiceClientEvent")
 public interface UserServiceClient {
     @GetMapping("/api/users/{userId}/email")
     String getEmailByUserId(@PathVariable("userId") Long userId);
