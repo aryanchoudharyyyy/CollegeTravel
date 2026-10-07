@@ -1,11 +1,9 @@
 package com.CollegeTravel.trip_service.serviceImpl;
 
-import com.CollegeTravel.trip_service.client.Group;
-import com.CollegeTravel.trip_service.client.GroupLookupClient;
-import com.CollegeTravel.trip_service.client.GroupLookupResult;
-import com.CollegeTravel.trip_service.client.GroupServiceClient;
+import com.CollegeTravel.trip_service.client.*;
 import com.CollegeTravel.trip_service.dto.Response.MatchedTripResponse;
 import com.CollegeTravel.trip_service.dto.Response.TripCreationResponse;
+import com.CollegeTravel.trip_service.dto.Response.UserSummaryDTO;
 import com.CollegeTravel.trip_service.entity.OutboxEvent;
 import com.CollegeTravel.trip_service.entity.Trip;
 import com.CollegeTravel.trip_service.event.TripCreatedEvent;
@@ -27,11 +25,14 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class TripServiceImpl implements TripService {
     private final TripRepository tripRepository;
+    private final UserServiceClient userServiceClient;
     private final TripEventPublisher tripEventPublisher;
     private final ApplicationEventPublisher eventPublisher;
     private static final long WINDOW_HOURS =1;
@@ -92,8 +93,19 @@ public class TripServiceImpl implements TripService {
         GroupLookupResult lookupResult = groupLookupClient.findExistingGroup(
                 trip.getSourcePoint(), trip.getBoardingStation(), trip.getTravelDateTime().toLocalDate()
         );
+        List<Long> userIds =  matched.stream().map(Trip::getUserId).toList();
+        Map<Long, String> userNameMap;
+        if (!userIds.isEmpty()) {
+            List<UserSummaryDTO> users = userServiceClient.getUsersByIds(userIds);
+            userNameMap = users.stream().collect(Collectors.toMap(UserSummaryDTO::id, UserSummaryDTO::name));
+        } else {
+            userNameMap = Map.of();
+        }
         return matched.stream()
-                .map(m-> new MatchedTripResponse(m,lookupResult.groupId(), lookupResult.available()))
+                .map(m -> {
+                    String name = userNameMap.getOrDefault(m.getUserId(), "Unknown");
+                    return new MatchedTripResponse(m, name, lookupResult.groupId(), lookupResult.available());
+                })
                 .toList();
     }
 }
