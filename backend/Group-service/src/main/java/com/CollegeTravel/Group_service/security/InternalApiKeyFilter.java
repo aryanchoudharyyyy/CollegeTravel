@@ -31,7 +31,7 @@ public class InternalApiKeyFilter extends OncePerRequestFilter {
             response.sendError(HttpServletResponse.SC_FORBIDDEN);
             return;
         }
-        var authority = new SimpleGrantedAuthority("ROLE_INTERNAL-SERVICE");
+        var authority = new SimpleGrantedAuthority("ROLE_INTERNAL_SERVICE");
         var auth = new UsernamePasswordAuthenticationToken(
                 "internal-service", null, List.of(authority)
         );
