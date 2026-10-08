@@ -29,9 +29,10 @@ const handleSubmit = async (e) => {
       const response = await postTrip(tripData);
       console.log("Trip posted successfully", response.data);
       const matches = response.data.immediateMatches;
+      const myTrip = response.data.myTrip;
       navigate("/trip-matches", {
         state: {
-          matches
+          matches, myTrip
         }
       });
       
@@ -43,12 +44,11 @@ const handleSubmit = async (e) => {
   };
   const getTravelDateTime = () =>{
     let [hours, minutes]  = travelTime.split(":").map(Number);
-    if(ampm == "PM" && hours!=12){
-      hours+=12;
-
+    if(ampm === "PM" && hours !== 12){
+      hours += 12;
     }
-    if(ampm =="AM" && hours!=12){
-      hours=0;
+    if(ampm === "AM" && hours === 12){
+      hours = 0;
     }
     return `${travelDate}T${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:00`;
   };
