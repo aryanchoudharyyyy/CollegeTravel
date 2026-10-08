@@ -46,6 +46,7 @@ function TripMatches() {
 
   const matches = location.state?.matches || [];
   const myTrip = location.state?.myTrip;
+  const [errorMessage, setErrorMessage] = useState("");
 
   console.log("MATCHES:", matches);
   console.log("MY TRIP:", myTrip);
@@ -71,17 +72,24 @@ function TripMatches() {
         console.log("Group Created successfully:", response.data);
         return true;
     } catch (error) {
-        console.log(
-            "Failed to create group:", error.response?.data || error.message
-        );
+        setErrorMessage(error.response?.data?.message || "Failed to create group. Please try again.");
         return false;
         
     }
   };
 
   return (
+      
     <div className="tm-match-list" style={{ paddingTop: "24px" }}>
-            {/* No matches */}
+      
+      {/* SHOW ERROR NOTIFICATION HERE */}
+      {errorMessage && (
+        <div style={{ padding: "12px", backgroundColor: "#fee2e2", color: "#b91c1c", borderRadius: "8px", marginBottom: "16px", textAlign: "center", border: "1px solid #f87171" }}>
+          {errorMessage}
+        </div>
+      )}
+
+      {/* No matches */}
       {matches.length === 0 ? (
         <div className="tm-no-matches">
           <h2>No matches found</h2>
