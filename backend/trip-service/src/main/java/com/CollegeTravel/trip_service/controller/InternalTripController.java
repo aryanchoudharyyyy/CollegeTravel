@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.time.LocalDate;
 
 @RestController
-@RequestMapping("/api/internal/groups")
+@RequestMapping("/api/internal/trips")
 @RequiredArgsConstructor
 public class InternalTripController {
     private final TripService tripService;
