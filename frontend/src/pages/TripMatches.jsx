@@ -1,5 +1,4 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   Clock,
@@ -9,7 +8,7 @@ import {
 } from "lucide-react";
 import "../styles/TripMatches.css";
 import { createGroup, joinGroup } from "../api/groupApi";
-
+import { getTripMatches } from "../api/tripApi";
 
 // "Aman Sharma" -> "AS"
 function getInitials(name = "") {
@@ -31,7 +30,6 @@ function formatDateTime(dateTime) {
       month: "short",
       year: "numeric",
     }),
-
     time: date.toLocaleTimeString("en-IN", {
       hour: "numeric",
       minute: "2-digit",
@@ -44,47 +42,91 @@ function TripMatches() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const matches = location.state?.matches || [];
   const myTrip = location.state?.myTrip;
+
   const [errorMessage, setErrorMessage] = useState("");
+  const [matches, setMatches] = useState(
+    location.state?.matches || []
+  );
+  const [openMenuId, setOpenMenuId] = useState(null);
+
+  // Fetch fresh matches
+  useEffect(() => {
+    if (myTrip && myTrip.id) {
+      getTripMatches(myTrip.id)
+        .then((response) => {
+          setMatches(response.data);
+        })
+        .catch((error) => {
+          console.log(
+            "Failed to fetch fresh matches:",
+            error.response?.data || error.message
+          );
+        });
+    }
+  }, [myTrip]);
 
   console.log("MATCHES:", matches);
   console.log("MY TRIP:", myTrip);
 
-  const [openMenuId, setOpenMenuId] = useState(null);
-
   const toggleMenu = (id) => {
-    setOpenMenuId((current) => (current === id ? null : id));
+    setOpenMenuId((current) =>
+      current === id ? null : id
+    );
   };
+
+  // Create group
   const handleCreateGroup = async () => {
-    if(!myTrip){
-        console.log("Trip data not available");
-        return false;
+    if (!myTrip) {
+      console.log("Trip data not available");
+      return false;
     }
+
     const groupData = {
-        sourcePoint: myTrip.sourcePoint,
-        boardingStation: myTrip.boardingStation,
-        travelDate: myTrip.travelDateTime.split("T")[0]
+      sourcePoint: myTrip.sourcePoint,
+      boardingStation: myTrip.boardingStation,
+      travelDate: myTrip.travelDateTime.split("T")[0],
     };
+
     console.log("GROUP DATA:", groupData);
+
     try {
-        const response = await createGroup(groupData);
-        console.log("Group Created successfully:", response.data);
-        return true;
+      const response = await createGroup(groupData);
+
+      console.log(
+        "Group Created successfully:",
+        response.data
+      );
+
+      return true;
     } catch (error) {
-        setErrorMessage(error.response?.data?.message || "Failed to create group. Please try again.");
-        return false;
-        
+      setErrorMessage(
+        error.response?.data?.message ||
+          "Failed to create group. Please try again."
+      );
+
+      return false;
     }
   };
 
   return (
-      
-    <div className="tm-match-list" style={{ paddingTop: "24px" }}>
-      
-      {/* SHOW ERROR NOTIFICATION HERE */}
+    <div
+      className="tm-match-list"
+      style={{ paddingTop: "24px" }}
+    >
+      {/* Error notification */}
       {errorMessage && (
-        <div style={{ padding: "12px", backgroundColor: "#fee2e2", color: "#b91c1c", borderRadius: "8px", marginBottom: "16px", textAlign: "center", border: "1px solid #f87171" }}>
+        <div
+          style={{
+            padding: "12px",
+            backgroundColor: "#fee2e2",
+            color: "#b91c1c",
+            borderRadius: "8px",
+            marginBottom: "16px",
+            textAlign: "center",
+            border: "1px solid #f87171",
+          }}
+        >
           {errorMessage}
         </div>
       )}
@@ -93,23 +135,25 @@ function TripMatches() {
       {matches.length === 0 ? (
         <div className="tm-no-matches">
           <h2>No matches found</h2>
-
           <p>
             We couldn't find anyone traveling on a similar trip yet.
           </p>
-
           <p>
-            Create a group and students with a similar trip
-            can join it later.
+            Create a group and students with a similar trip can join it later.
           </p>
 
-          {/* NEW BUTTON ADDED HERE */}
-          <button 
-            className="tm-post-trip-btn" 
-            style={{ marginTop: "16px", display: "inline-flex", alignItems: "center", gap: "8px" }}
+          <button
+            className="tm-post-trip-btn"
+            style={{
+              marginTop: "16px",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "8px",
+            }}
             onClick={async () => {
               const created = await handleCreateGroup();
-              if(created){
+
+              if (created) {
                 navigate("/chats");
               }
             }}
@@ -205,10 +249,35 @@ function TripMatches() {
                       {/* Personal chat */}
                       <button
                         onClick={async () => {
-                        const created = await handleCreateGroup();
                           setOpenMenuId(null);
-                          if(created){
-                          navigate("/chats");
+
+                          if (match.existingGroupId) {
+                            try {
+                              await joinGroup(
+                                match.existingGroupId
+                              );
+
+                              navigate("/chats");
+                            } catch (error) {
+                              if (
+                                error.response?.data?.error ===
+                                "AlreadyGroupMemberException"
+                              ) {
+                                navigate("/chats");
+                              } else {
+                                setErrorMessage(
+                                  error.response?.data?.message ||
+                                    "Failed to open chat."
+                                );
+                              }
+                            }
+                          } else {
+                            const created =
+                              await handleCreateGroup();
+
+                            if (created) {
+                              navigate("/chats");
+                            }
                           }
                         }}
                       >
@@ -221,16 +290,35 @@ function TripMatches() {
                         <button
                           onClick={async () => {
                             setOpenMenuId(null);
+
                             try {
-                            const join = await joinGroup(match.existingGroupId);
-                            if(join){  
-                              console.log("Join Group successfully:", join.data);
-                            navigate("/chats");  
-                            }
+                              const join = await joinGroup(
+                                match.existingGroupId
+                              );
+
+                              if (join) {
+                                console.log(
+                                  "Join Group successfully:",
+                                  join.data
+                                );
+                                navigate("/chats");
+                              }
                             } catch (error) {
-                              console.log("Failed to join group", error.response?.data || error.message);
+                              const errorData =
+                                error.response?.data;
+
+                              if (
+                                errorData?.error ===
+                                "AlreadyGroupMemberException"
+                              ) {
+                                navigate("/chats");
+                              } else {
+                                setErrorMessage(
+                                  errorData?.message ||
+                                    "Failed to join group"
+                                );
+                              }
                             }
-                            
                           }}
                         >
                           <ShieldPlus size={14} />
@@ -250,6 +338,3 @@ function TripMatches() {
 }
 
 export default TripMatches;
-
-
-
