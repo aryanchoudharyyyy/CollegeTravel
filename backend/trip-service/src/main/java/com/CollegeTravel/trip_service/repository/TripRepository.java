@@ -16,12 +16,10 @@ public interface TripRepository extends JpaRepository<Trip,Long> {
            FROM Trip t
            WHERE t.id <> :tripId
            AND t.userId <> :userId
-           AND t.sourcePoint =:sourcePoint
-           AND t.boardingStation=:boardingStation
+           AND LOWER(TRIM(t.sourcePoint)) = LOWER(TRIM(:sourcePoint))
+           AND LOWER(TRIM(t.boardingStation)) = LOWER(TRIM(:boardingStation))
            AND t.travelDateTime BETWEEN :windowStart AND :windowEnd
-          
-
-""")
+           """)
     List<Trip> findCandidates(
             @Param("tripId") Long tripId,
             @Param("userId") Long userId,
@@ -31,7 +29,9 @@ public interface TripRepository extends JpaRepository<Trip,Long> {
             @Param("windowEnd") LocalDateTime windowEnd
           );
     @Query("SELECT CASE WHEN COUNT(t)>0 THEN true ELSE false END FROM Trip t " +
-            "WHERE t.userId = :userId AND t.sourcePoint = :sourcePoint AND t.boardingStation = :boardingStation " +
+            "WHERE t.userId = :userId " +
+            "AND LOWER(TRIM(t.sourcePoint)) = LOWER(TRIM(:sourcePoint)) " +
+            "AND LOWER(TRIM(t.boardingStation)) = LOWER(TRIM(:boardingStation)) " +
             "AND t.travelDateTime BETWEEN :dayStart AND :dayEnd"
     )
     boolean existsMatchingTrip(
