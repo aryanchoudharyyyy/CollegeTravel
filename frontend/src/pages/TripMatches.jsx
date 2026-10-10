@@ -98,7 +98,7 @@ function TripMatches() {
         response.data
       );
 
-      return true;
+      return response.data.id;
     } catch (error) {
       setErrorMessage(
         error.response?.data?.message ||
@@ -154,7 +154,7 @@ function TripMatches() {
               const created = await handleCreateGroup();
 
               if (created) {
-                navigate("/chats");
+                navigate(`/chats?groupId=${created}`);
               }
             }}
           >
@@ -257,13 +257,13 @@ function TripMatches() {
                                 match.existingGroupId
                               );
 
-                              navigate("/chats");
+                              navigate(`/chats?groupId=${match.existingGroupId}`);
                             } catch (error) {
                               if (
                                 error.response?.data?.error ===
                                 "AlreadyGroupMemberException"
                               ) {
-                                navigate("/chats");
+                                navigate(`/chats?groupId=${match.existingGroupId}`);
                               } else {
                                 setErrorMessage(
                                   error.response?.data?.message ||
@@ -276,7 +276,7 @@ function TripMatches() {
                               await handleCreateGroup();
 
                             if (created) {
-                              navigate("/chats");
+                              navigate(`/chats?groupId=${created}`);
                             }
                           }
                         }}
@@ -301,7 +301,7 @@ function TripMatches() {
                                   "Join Group successfully:",
                                   join.data
                                 );
-                                navigate("/chats");
+                                navigate(`/chats?groupId=${match.existingGroupId}`);
                               }
                             } catch (error) {
                               const errorData =
@@ -311,7 +311,7 @@ function TripMatches() {
                                 errorData?.error ===
                                 "AlreadyGroupMemberException"
                               ) {
-                                navigate("/chats");
+                                navigate(`/chats?groupId=${match.existingGroupId}`);
                               } else {
                                 setErrorMessage(
                                   errorData?.message ||

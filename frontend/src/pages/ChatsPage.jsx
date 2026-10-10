@@ -1,12 +1,13 @@
 import { useEffect, useState, useRef, useMemo } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
-import { useAuth } from "../contexts/AuthContext";
-import ChatComposer from "./ChatComposer";
 import {
   connectWebSocket,
   sendMessage as wsSendMessage,
   disconnectWebSocket,
 } from "../services/Websocket";
+import { useAuth } from "../contexts/AuthContext";
+import ChatComposer from "./ChatComposer";
+import { getMyGroups } from "../api/groupApi";
 import {
   MessageCircle,
   Users,
@@ -22,44 +23,6 @@ import {
   Search,
 } from "lucide-react";
 import "../styles/ChatsPage.css";
-
-// ---------------------------------------------------------
-// MOCK DATA
-// Each group has its own groupId (WebSocket channel) and
-// tripId (links to a trip from TripsPage).
-// ---------------------------------------------------------
-const MOCK_GROUPS = [
-  {
-    groupId: 1001,
-    tripId: 1,
-    route: "KIET Gate → Ghaziabad Railway Station",
-    destination: "Mumbai Central",
-    travelDate: "2026-09-15",
-    members: 4,
-    lastMessage: "Who's booking the cab?",
-    lastMessageTime: "2h ago",
-  },
-  {
-    groupId: 1002,
-    tripId: 2,
-    route: "KIET Hostel → New Delhi Railway Station",
-    destination: "Lucknow Charbagh",
-    travelDate: "2026-09-18",
-    members: 3,
-    lastMessage: "Let's meet at the hostel gate at 7 PM",
-    lastMessageTime: "5h ago",
-  },
-  {
-    groupId: 1003,
-    tripId: 3,
-    route: "College Gate → Anand Vihar ISBT",
-    destination: "Dehradun",
-    travelDate: "2026-09-20",
-    members: 6,
-    lastMessage: "Bus tickets booked!",
-    lastMessageTime: "1d ago",
-  },
-];
 
 const fmtDate = (d) => {
   if (!d) return "";

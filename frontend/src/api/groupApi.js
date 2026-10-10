@@ -5,3 +5,7 @@ export const createGroup = (groupData) =>{
 export const joinGroup = (groupId) =>{
     return apiClient.post(`/api/groups/${groupId}/join`);
 };
+
+export const getMyGroups = () => {
+    return apiClient.get("/api/groups/user");
+};

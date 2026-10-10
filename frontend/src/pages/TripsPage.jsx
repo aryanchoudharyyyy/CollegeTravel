@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Calendar,
@@ -8,49 +8,13 @@ import {
 } from "lucide-react";
 
 import "../styles/TripsPage.css";
-
-
-// --- mock data -------------------------------------------------------
-
-const TODAY = new Date("2026-09-13");
+import { getExploreTrips } from "../api/tripApi";
+const TODAY = new Date();
 
 const daysUntil = (dateStr) =>
   Math.round(
     (new Date(dateStr) - TODAY) / (1000 * 60 * 60 * 24)
   );
-
-const INITIAL_TRIPS = [
-  {
-    id: 1,
-    sourcePoint: "KIET Gate",
-    boardingStation: "Ghaziabad Railway Station",
-    finalDestination: "Mumbai Central",
-    travelDate: "2026-09-15",
-    travelTime: "06:30 AM",
-    
-    postedBy: "Aryan C."
-  },
-  {
-    id: 2,
-    sourcePoint: "KIET Hostel",
-    boardingStation: "New Delhi Railway Station",
-    finalDestination: "Lucknow Charbagh",
-    travelDate: "2026-09-18",
-    travelTime: "09:00 PM",
-    
-    postedBy: "Sneha P."
-  },
-  {
-    id: 3,
-    sourcePoint: "College Gate",
-    boardingStation: "Anand Vihar ISBT",
-    finalDestination: "Dehradun",
-    travelDate: "2026-09-20",
-    travelTime: "11:30 PM",
-
-    postedBy: "Rahul V."
-  }
-];
 
 
 
@@ -69,8 +33,29 @@ const fmtDate = (d) => {
 
 export default function TripsPage() {
   const navigate = useNavigate();
-  const [trips] = useState(INITIAL_TRIPS);
+  const [trips, setTrips] = useState([]);
   const [sortKey, setSortKey] = useState("newest");
+
+  useEffect(()=>{
+    getExploreTrips()
+      .then((response) => {
+        const mappedTrips = response.data.map(item => ({
+          id: item.trip.id,
+          sourcePoint: item.trip.source,
+           boardingStation: item.trip.boardingStation,
+          finalDestination: item.trip.destination || "",
+          travelDate: item.trip.travelDateTime.split('T')[0],
+          // Grabs just the HH:mm portion of the time
+          travelTime: item.trip.travelDateTime.split('T')[1].substring(0, 5), 
+          postedBy: item.postedBy,
+          rawTrip: item.trip // Keep the raw backend data just in case
+        }));
+        setTrips(mappedTrips);
+      })
+      .catch((error)=> {
+        console.error("Failed to load explore feed:", error);
+      });
+  }, []);
 
   const sortedTrips = useMemo(() => {
     const list = [...trips];
