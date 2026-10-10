@@ -1,6 +1,7 @@
 package com.CollegeTravel.trip_service.serviceImpl;
 
 import com.CollegeTravel.trip_service.client.*;
+import com.CollegeTravel.trip_service.dto.Response.ExploreTripResponse;
 import com.CollegeTravel.trip_service.dto.Response.MatchedTripResponse;
 import com.CollegeTravel.trip_service.dto.Response.TripCreationResponse;
 import com.CollegeTravel.trip_service.dto.Response.UserSummaryDTO;
@@ -83,6 +84,38 @@ public class TripServiceImpl implements TripService {
         LocalDateTime dayEnd = travelDate.atTime(23,59,59);
         return tripRepository.existsMatchingTrip(userId, sourcePoint, boardingStation,dayStart, dayEnd);
     }
+
+    @Override
+    public List<ExploreTripResponse> getExploreTrips(Long userId) {
+    List<Trip> othersTrips = tripRepository.findByUserIdNot(userId);
+    if (othersTrips.isEmpty()){
+        return List.of();
+    }
+    List<Long> userIds = othersTrips.stream()
+            .map(Trip::getUserId)
+            .distinct()
+            .toList();
+        Map<Long, String> tempMap;
+        try {
+            List<UserSummaryDTO> users = userServiceClient.getUsersByIds(userIds);
+            tempMap = users.stream().collect(Collectors.toMap(UserSummaryDTO::id, UserSummaryDTO::name));
+
+        } catch (Exception e) {
+            tempMap = Map.of();
+
+        }
+        final Map<Long, String> userNameMap = tempMap;
+        return othersTrips.stream()
+                .map(trip ->{
+                    String name = userNameMap.getOrDefault(trip.getUserId(), "Unknown");
+                    return new ExploreTripResponse(trip, name);
+
+                })
+                .toList();
+    }
+
+
+
     private List<MatchedTripResponse> computeMatches(Trip trip){
         LocalDateTime windowStart = trip.getTravelDateTime().minusHours(WINDOW_HOURS);
         LocalDateTime windowEnd = trip.getTravelDateTime().plusHours(WINDOW_HOURS);

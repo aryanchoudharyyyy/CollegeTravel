@@ -1,5 +1,6 @@
 package com.CollegeTravel.trip_service.controller;
 
+import com.CollegeTravel.trip_service.dto.Response.ExploreTripResponse;
 import com.CollegeTravel.trip_service.dto.Response.MatchedTripResponse;
 import com.CollegeTravel.trip_service.dto.Response.TripCreationResponse;
 import com.CollegeTravel.trip_service.dto.Request.CreateTripRequest;
@@ -37,6 +38,12 @@ public class TripController {
         Long userId = (Long) request.getAttribute("userId");
         return tripService.findMatches(tripId, userId);
     }
+    @GetMapping("/explore")
+    public List<ExploreTripResponse> getExploreTrips(HttpServletRequest request){
+        Long userId = (Long) request.getAttribute("userId");
+        return tripService.getExploreTrips(userId);
+    }
+
 
 
 }
