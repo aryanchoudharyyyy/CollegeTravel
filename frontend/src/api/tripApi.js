@@ -1,3 +1,4 @@
+
 import apiClient from "./apiClient";
 export const postTrip = (tripData) =>{
     return apiClient.post("/api/trips", tripData);
@@ -7,4 +8,7 @@ export const getTripMatches = (tripId) => {
 };
 export const getExploreTrips= () =>{
     return apiClient.get('/api/trips/explore');
+};
+export const getMyTrips = () =>{
+    return apiClient.get("/api/trips/my-trips");
 };

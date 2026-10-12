@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { getMyTrips } from "../api/tripApi";
 import { useNavigate } from "react-router-dom";
 import { TrainFront, BusFront, Clock, MoveRight, Flame, Trash2, Edit } from "lucide-react";
 import "../styles/MyListings.css";
@@ -12,31 +13,21 @@ const myListings = [
     }
 ];
 
-const myTrips = [
-    {
-        id: 1,
-        sourcePoint: "KIET Gate",
-        boardingStation: "Ghaziabad Railway Station",
-        finalDestination: "Mumbai Central",
-        travelDate: "2026-09-15",
-        travelTime: "06:30 AM",
-        postedBy: "Aryan C."
-    },
-    {
-        id: 2,
-        sourcePoint: "KIET Hostel",
-        boardingStation: "New Delhi Railway Station",
-        finalDestination: "Lucknow Charbagh",
-        travelDate: "2026-09-18",
-        travelTime: "09:00 PM",
-        postedBy: "Sneha P."
-    }
-];
+
 
 function MyListings() {
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState("listings");
-
+    const [myTrips, setMyTrips] = useState([]);
+useEffect(()=>{
+    getMyTrips()
+    .then((res)=> {
+        setMyTrips(res.data);
+    })
+    .catch((err)=>{
+        console.error("Failed to load my trips:", err);
+    });
+},[]);
     return (
         <div className="pr-page">
              <h1 style={{ marginBottom: "var(--space-6)" }}>My Dashboard</h1>
