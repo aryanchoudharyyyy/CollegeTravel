@@ -8,6 +8,7 @@ import {
 import { useAuth } from "../contexts/AuthContext";
 import ChatComposer from "./ChatComposer";
 import { getMyGroups } from "../api/groupApi";
+import { getGroupChatHistory } from "../api/chatApi";
 import {
   MessageCircle,
   Users,
@@ -142,7 +143,7 @@ function MessageBubble({ msg, isGrouped, isOwn, userName }) {
 // ---------------------------------------------------------
 // COMPONENT: Chat Area (Right Panel)
 // ---------------------------------------------------------
-function ChatArea({ group, messages, connectionStatus, onSendMessage, userName }) {
+function ChatArea({ group, messages, connectionStatus, onSendMessage, userName, currentUserId }) {
   const [inputText, setInputText] = useState("");
   const messagesEndRef = useRef(null);
   const textareaRef = useRef(null);
@@ -243,7 +244,7 @@ function ChatArea({ group, messages, connectionStatus, onSendMessage, userName }
         {messages.map((msg, idx) => {
           const prevMsg = messages[idx - 1];
           const isGrouped = prevMsg && prevMsg.senderId === msg.senderId;
-          const isOwn = userName && msg.senderId === 1; // userId 1 is the current mock user
+          const isOwn = currentUserId && msg.senderId === currentUserId; // userId 1 is the current mock user
 
           return (
             <MessageBubble
@@ -299,7 +300,7 @@ export default function ChatsPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
  
-
+  const [groups, setGroups] = useState([]);
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [messages, setMessages] = useState([]);
   const [connectionStatus, setConnectionStatus] = useState("disconnected");
@@ -307,20 +308,38 @@ export default function ChatsPage() {
 
   const userName = user?.name || "You";
 
-  // Auto-select group from ?trip=id query param
-  const tripIdFromUrl = searchParams.get("trip");
+  // trip matches navigates here with ? groupId=..
+  const groupIdFromUrl = searchParams.get("groupId");
 
   useEffect(() => {
-    if (tripIdFromUrl) {
-      const matchedGroup = MOCK_GROUPS.find(
-        (g) => g.tripId === parseInt(tripIdFromUrl)
-      );
-      if (matchedGroup) {
-        setSelectedGroup(matchedGroup);
-        setMobileShowChat(true);
+    getMyGroups()
+    .then((res) => {
+      const fetched = (res.data || []).map((g) => ({
+        groupId: g.id,
+        route: `${g.sourcePoint} -> ${g.boardingStation}`,
+        travelDate: g.travelDate,
+        lastMessage: "Tap to Chat",
+        lastMessageTime: "",
+        members: "Groups",
+        rawGroup: g,
+      }));
+      setGroups(fetched);
+
+      //Auto select group from ?groupId = in the url
+      if(groupIdFromUrl){
+        const matched = fetched.find(
+          (g) => String(g.groupId) === String(groupIdFromUrl)
+        );
+        if(matched){
+          setSelectedGroup(matched);
+          setMobileShowChat(true);
+        }
       }
-    }
-  }, [tripIdFromUrl]);
+    })
+    .catch((err) => {
+      console.error("Failed to load user Groups:", err);
+    });
+}, [groupIdFromUrl]);
 
   // Connect/disconnect WebSocket when selected group changes
   useEffect(() => {
@@ -329,11 +348,17 @@ export default function ChatsPage() {
       setConnectionStatus("disconnected");
       return;
     }
-
-    // Clear messages for the new group
-    setMessages([]);
-
-    // Connect via the centralized WebSocket service
+    // load message history from our new chatapi.js
+    getGroupChatHistory(selectedGroup.groupId)
+    .then((res) => {
+      setMessages(res.data?.messages || []);
+    })
+    .catch((err) => {
+      console.error("Failed to load message history:", err);
+      setMessages([]);
+    });
+    // connect real-time STOMP websocket
+    
     connectWebSocket(
       selectedGroup.groupId,
       (receivedMessage) => {
@@ -370,7 +395,7 @@ export default function ChatsPage() {
         {/* Left Panel — Group List */}
         <div className="chats-left-panel">
           <GroupList
-            groups={MOCK_GROUPS}
+            groups={groups}
             selectedGroupId={selectedGroup?.groupId}
             onSelectGroup={handleSelectGroup}
           />
@@ -392,6 +417,7 @@ export default function ChatsPage() {
               connectionStatus={connectionStatus}
               onSendMessage={handleSendMessage}
               userName={userName}
+              currentUserId={user?.id}
             />
           ) : (
             <EmptyState />

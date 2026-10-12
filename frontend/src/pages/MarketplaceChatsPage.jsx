@@ -2,11 +2,11 @@ import { useEffect, useState, useRef } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import ChatComposer from "./ChatComposer";
-import {
-  connectMarketplaceWebSocket,
-  sendMarketplaceMessage,
-  disconnectMarketplaceWebSocket,
-} from "../services/MarketplaceWebsocket";
+// import {
+//   connectMarketplaceWebSocket,
+//   sendMarketplaceMessage,
+//   disconnectMarketplaceWebSocket,
+// } from "../services/MarketplaceWebsocket";
 import {
   ArrowLeft,
   Send,

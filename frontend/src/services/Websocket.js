@@ -1,48 +1,39 @@
 import { Client } from "@stomp/stompjs";
-import SockJS from "sockjs-client";
+import { getAccessToken } from "../utils/token";
 
-const WS_URL = "http://localhost:8080/ws";
+// Native WebSocket URL routed perfectly through your API Gateway!
+const WS_URL = "ws://localhost:8080/api/chat/ws";
 
 let stompClient = null;
 let connectionStatusCallback = null;
 
-/**
- * Connect to a trip group's WebSocket channel.
- * @param {number} groupId  — The group to subscribe to
- * @param {function} onMessage — Called with each received message object
- * @param {function} [onStatusChange] — Called with "connected" | "connecting" | "disconnected"
- */
 export const connectWebSocket = (groupId, onMessage, onStatusChange) => {
-    // Disconnect any existing connection first
-    disconnectWebSocket();
+    disconnectWebSocket(); // Clean up old connections
 
     connectionStatusCallback = onStatusChange;
     if (onStatusChange) onStatusChange("connecting");
 
     stompClient = new Client({
-        webSocketFactory: () => {
-            return new SockJS(WS_URL);
+        brokerURL: WS_URL,
+        connectHeaders: {
+            // Your backend interceptor strictly requires this!
+            Authorization: `Bearer ${getAccessToken()}`
         },
         reconnectDelay: 5000,
         onConnect: () => {
             console.log("WebSocket connected to group", groupId);
             if (connectionStatusCallback) connectionStatusCallback("connected");
 
-            stompClient.subscribe(
-                `/topic/group.${groupId}`,
-                (message) => {
-                    const receivedMessage = JSON.parse(message.body);
-                    console.log("Message received:", receivedMessage);
-                    onMessage(receivedMessage);
+            // Subscribe to the specific group topic
+            stompClient.subscribe(`/topic/group.${groupId}`, (message) => {
+                if (message.body && onMessage) {
+                    onMessage(JSON.parse(message.body));
                 }
-            );
-        },
-        onDisconnect: () => {
-            console.log("WebSocket disconnected");
-            if (connectionStatusCallback) connectionStatusCallback("disconnected");
+            });
         },
         onStompError: (frame) => {
-            console.error("STOMP error:", frame);
+            console.error("Broker reported error:", frame.headers["message"]);
+            console.error("Additional details:", frame.body);
             if (connectionStatusCallback) connectionStatusCallback("disconnected");
         },
         onWebSocketError: (error) => {
@@ -54,14 +45,9 @@ export const connectWebSocket = (groupId, onMessage, onStatusChange) => {
     stompClient.activate();
 };
 
-/**
- * Send a message to the connected group.
- * @param {number} groupId — The group to send to
- * @param {string} content — The message text
- */
 export const sendMessage = (groupId, content) => {
     if (!stompClient || !stompClient.connected) {
-        console.warn("Cannot send message — WebSocket not connected");
+        console.warn("Cannot send message - WebSocket not connected");
         return false;
     }
 
@@ -75,16 +61,10 @@ export const sendMessage = (groupId, content) => {
     return true;
 };
 
-/**
- * Check if WebSocket is currently connected.
- */
 export const isConnected = () => {
     return stompClient?.connected ?? false;
 };
 
-/**
- * Disconnect the WebSocket cleanly.
- */
 export const disconnectWebSocket = () => {
     connectionStatusCallback = null;
     if (stompClient) {
