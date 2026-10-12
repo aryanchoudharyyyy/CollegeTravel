@@ -2,6 +2,7 @@ package com.CollegeTravel.Group_service.controller;
 
 import com.CollegeTravel.Group_service.dto.Request.CreateGroupRequest;
 import com.CollegeTravel.Group_service.dto.Response.GroupMembersResponse;
+import com.CollegeTravel.Group_service.dto.Response.GroupResponse;
 import com.CollegeTravel.Group_service.entity.Group;
 import com.CollegeTravel.Group_service.service.GroupService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -11,6 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 
 @RestController
@@ -56,5 +58,9 @@ public class GroupController {
         groupService.leaveGroup(groupId,userId);
         return "Left group successfully";
     }
-
+    @GetMapping("/user")
+    public ResponseEntity<List<GroupResponse>> getMyGroups(HttpServletRequest request){
+        Long userId = (Long) request.getAttribute("userId");
+        return ResponseEntity.ok(groupService.getMyGroups(userId));
+    }
 }

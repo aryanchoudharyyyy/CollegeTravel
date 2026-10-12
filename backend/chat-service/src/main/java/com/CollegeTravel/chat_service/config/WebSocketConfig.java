@@ -17,8 +17,14 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     private final WebSocketSubscriptionInterceptor webSocketSubscriptionInterceptor;
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry){
-        registry.addEndpoint("/ws").setAllowedOriginPatterns("*").withSockJS();
+        // Modern Native WebSocket endpoint (Solves the Vite crash!)
+        registry.addEndpoint("/api/chat/ws")
+                .setAllowedOriginPatterns("*");
 
+        // Fallback with SockJS just in case
+        registry.addEndpoint("/api/chat/ws")
+                .setAllowedOriginPatterns("*")
+                .withSockJS();
     }
 
 

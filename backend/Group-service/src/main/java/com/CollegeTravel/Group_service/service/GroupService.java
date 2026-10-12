@@ -1,9 +1,11 @@
 package com.CollegeTravel.Group_service.service;
 
 import com.CollegeTravel.Group_service.dto.Response.GroupMembersResponse;
+import com.CollegeTravel.Group_service.dto.Response.GroupResponse;
 import com.CollegeTravel.Group_service.entity.Group;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 
 public interface GroupService {
@@ -14,4 +16,5 @@ public interface GroupService {
     boolean isMember(Long groupId, Long userId);
     GroupMembersResponse getGroupMembers(Long groupId, Long requestingUserId);
     void leaveGroup(Long groupId, Long userId);
+    List<GroupResponse> getMyGroups(Long userId);
 }

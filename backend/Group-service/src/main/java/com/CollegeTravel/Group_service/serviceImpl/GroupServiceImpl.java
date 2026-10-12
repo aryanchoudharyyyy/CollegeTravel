@@ -4,6 +4,7 @@ import com.CollegeTravel.Group_service.client.TripLookupClient;
 import com.CollegeTravel.Group_service.client.UserLookupClient;
 import com.CollegeTravel.Group_service.client.UserSummaryDTO;
 import com.CollegeTravel.Group_service.dto.Response.GroupMembersResponse;
+import com.CollegeTravel.Group_service.dto.Response.GroupResponse;
 import com.CollegeTravel.Group_service.entity.Group;
 import com.CollegeTravel.Group_service.entity.GroupMember;
 import com.CollegeTravel.Group_service.exception.*;
@@ -105,6 +106,21 @@ public class GroupServiceImpl implements GroupService {
         groupMemberRepository.deleteByGroup_IdAndUserId(groupId, userId);
         long remainingMembers = groupMemberRepository.countByGroup_Id(groupId);
         if (remainingMembers==0) groupRepository.delete(group);
+
+    }
+
+    @Override
+    public List<GroupResponse> getMyGroups(Long userId) {
+        return groupMemberRepository.findGroupsByUserId(userId).stream()
+                .map(group -> new GroupResponse(
+                        group.getId(),
+                        group.getSourcePoint(),
+                        group.getBoardingStation(),
+                        group.getTravelDate(),
+                        group.getCreatedBy(),
+                        group.getCreatedAt()
+                ))
+                .toList();
 
     }
 }
