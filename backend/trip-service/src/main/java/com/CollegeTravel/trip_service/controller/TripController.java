@@ -44,6 +44,11 @@ public class TripController {
         return tripService.getExploreTrips(userId);
     }
 
+    @GetMapping("/my-trips")
+    public List<Trip> getMyTrips(HttpServletRequest request){
+        Long userId = (Long) request.getAttribute("userId");
+        return tripService.getMyTrips(userId);
+    }
 
 
 }

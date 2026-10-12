@@ -13,4 +13,5 @@ public interface TripService {
     List<MatchedTripResponse> findMatches(Long tripId, Long requestingUserId);
     boolean userHasMatchingTrip(Long userId, String sourcePoint, String boardingStation, LocalDate travelDate);
     List<ExploreTripResponse> getExploreTrips(Long userId);
+    List<Trip> getMyTrips(Long userId);
 }

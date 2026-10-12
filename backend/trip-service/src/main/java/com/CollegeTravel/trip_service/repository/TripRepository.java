@@ -42,4 +42,5 @@ public interface TripRepository extends JpaRepository<Trip,Long> {
             @Param("dayEnd") LocalDateTime dayEnd
     );
     List<Trip> findByUserIdNot(Long userId);
+    List<Trip> findByUserId(Long userId);
 }

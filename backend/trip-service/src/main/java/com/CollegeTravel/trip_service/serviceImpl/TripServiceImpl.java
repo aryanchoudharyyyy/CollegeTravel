@@ -114,6 +114,10 @@ public class TripServiceImpl implements TripService {
                 .toList();
     }
 
+    @Override
+    public List<Trip> getMyTrips(Long userId) {
+        return tripRepository.findByUserId(userId);
+    }
 
 
     private List<MatchedTripResponse> computeMatches(Trip trip){
