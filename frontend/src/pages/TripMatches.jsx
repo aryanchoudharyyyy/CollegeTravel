@@ -76,7 +76,7 @@ function TripMatches() {
   };
 
   // Create group
-  const handleCreateGroup = async () => {
+  const handleCreateGroup = async (matchedUserId=null) => {
     if (!myTrip) {
       console.log("Trip data not available");
       return false;
@@ -86,6 +86,7 @@ function TripMatches() {
       sourcePoint: myTrip.sourcePoint,
       boardingStation: myTrip.boardingStation,
       travelDate: myTrip.travelDateTime.split("T")[0],
+      ...(matchedUserId ? {initialMemberId: matchedUserId} :{}),
     };
 
     console.log("GROUP DATA:", groupData);
@@ -273,7 +274,7 @@ function TripMatches() {
                             }
                           } else {
                             const created =
-                              await handleCreateGroup();
+                              await handleCreateGroup(match.trip.userId);
 
                             if (created) {
                               navigate(`/chats?groupId=${created}`);
