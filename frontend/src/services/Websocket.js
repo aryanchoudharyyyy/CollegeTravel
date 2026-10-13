@@ -45,7 +45,7 @@ export const connectWebSocket = (groupId, onMessage, onStatusChange) => {
     stompClient.activate();
 };
 
-export const sendMessage = (groupId, content) => {
+export const sendMessage = (groupId, content, senderName = null) => {
     if (!stompClient || !stompClient.connected) {
         console.warn("Cannot send message - WebSocket not connected");
         return false;
@@ -55,7 +55,8 @@ export const sendMessage = (groupId, content) => {
         destination: "/app/chat.sendMessage",
         body: JSON.stringify({
             groupId: groupId,
-            content: content.trim()
+            content: content.trim(),
+            senderName: senderName
         })
     });
     return true;

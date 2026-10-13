@@ -86,10 +86,11 @@ function GroupList({ groups, selectedGroupId, onSelectGroup }) {
 // COMPONENT: Message Bubble
 // ---------------------------------------------------------
 function MessageBubble({ msg, isGrouped, isOwn, userName }) {
-  const displayName = isOwn ? `${userName} (you)` : `User ${msg.senderId}`;
+  const otherName= msg.senderName || `User ${msg.senderId}`;
+  const displayName = isOwn ? `${userName} (you)` : otherName; 
   const initials = isOwn
     ? userName.slice(0, 2).toUpperCase()
-    : `U${msg.senderId}`;
+    : otherName.slice(0, 2).toUpperCase();
 
   const timeString = msg.sendAt
     ? new Date(msg.sendAt).toLocaleTimeString([], {
@@ -380,7 +381,7 @@ export default function ChatsPage() {
   };
 
   const handleSendMessage = (content) => {
-    wsSendMessage(selectedGroup.groupId, content);
+    wsSendMessage(selectedGroup.groupId, content, userName);
   };
 
   const handleMobileBack = () => {
