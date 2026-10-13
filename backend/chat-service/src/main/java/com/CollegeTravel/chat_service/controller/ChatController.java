@@ -51,10 +51,11 @@ public class ChatController {
         ChatMessage message = new ChatMessage();
         message.setGroupId(request.groupId());
         message.setSenderId(senderId);
+        message.setSenderName(request.senderName()!=null? request.senderName(): "User" + senderId);
         message.setContent(request.content());
         ChatMessage saved = chatMessageRepository.save(message);
         messagingTemplate.convertAndSend("/topic/group." + request.groupId(),
-                new ChatMessageResponse(saved.getId(), saved.getGroupId(), saved.getSenderId(), saved.getContent(), saved.getSendAt()));
+                new ChatMessageResponse(saved.getId(), saved.getGroupId(), saved.getSenderId(), saved.getSenderName(), saved.getContent(), saved.getSendAt()));
     }
     @MessageExceptionHandler
     @SendToUser("/queue/errors")

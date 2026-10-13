@@ -32,6 +32,9 @@ public class ChatMessage {
     @Column(nullable = false, length = 1000)
     private String content;
 
+    @Column(length = 100)
+    private String senderName;
+
     private LocalDateTime sendAt;
     @PrePersist
     protected void onCreate(){

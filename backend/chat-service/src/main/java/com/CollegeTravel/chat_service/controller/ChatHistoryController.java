@@ -67,6 +67,7 @@ public class ChatHistoryController {
                         message.getId(),
                         message.getGroupId(),
                         message.getSenderId(),
+                        message.getSenderName(),
                         message.getContent(),
                         message.getSendAt()
                 ))
