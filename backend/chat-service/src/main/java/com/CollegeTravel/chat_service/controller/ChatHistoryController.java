@@ -37,13 +37,17 @@ public class ChatHistoryController {
         }
         int safeLimit = Math.min(Math.max(limit, 1),MAX_LIMIT);
         MessageCursor cursor = before == null ? null : cursorCodec.decode(before);
-        List<ChatMessage> fetchedMessages = chatMessageRepository.findHistoryBefore(
+        List<ChatMessage> fetchedMessages = (cursor == null) ? chatMessageRepository.findLatestHistory(
                 groupId,
-                cursor != null ? cursor.timestamp() : null,
-                cursor != null? cursor.id() : null,
                 PageRequest.of(0, safeLimit+1)
 
-        );
+        ):
+                chatMessageRepository.findHistoryBefore(
+                        groupId,
+                        cursor.timestamp(),
+                        cursor.id(),
+                        PageRequest.of(0, safeLimit+1)
+                );
         boolean hasMore = fetchedMessages.size() > safeLimit;
         List<ChatMessage> pageMessages = new ArrayList<>(
                 hasMore

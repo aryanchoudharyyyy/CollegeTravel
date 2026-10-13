@@ -12,12 +12,19 @@ import java.util.List;
 
 public interface ChatMessageRepository  extends JpaRepository<ChatMessage, Long> {
     @Query("""
+    SELECT m
+    FROM ChatMessage m 
+    WHERE m.groupId = :groupId
+    ORDER BY m.sendAt DESC, m.id DESC 
+""")
+    List<ChatMessage> findLatestHistory(@Param("groupId") Long groupId, Pageable pageable);
+    @Query("""
         SELECT m
         FROM ChatMessage m
         WHERE m.groupId = :groupId
         AND (
-        :cursorTime IS NULL 
-        OR m.sendAt < :cursorTime
+         
+         m.sendAt < :cursorTime
         OR (m.sendAt = :cursorTime AND m.id < :cursorId)
         )
         ORDER BY m.sendAt DESC , m.id DESC 
