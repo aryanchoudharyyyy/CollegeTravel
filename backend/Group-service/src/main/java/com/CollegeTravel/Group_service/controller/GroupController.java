@@ -24,7 +24,7 @@ public class GroupController {
     @PostMapping
     public Group createGroup(@RequestBody CreateGroupRequest request, HttpServletRequest httpServletRequest) {
         Long userId = (Long) httpServletRequest.getAttribute("userId");
-        return groupService.createGroup(userId, request.sourcePoint(), request.boardingStation(), request.travelDate());
+        return groupService.createGroup(userId, request.sourcePoint(), request.boardingStation(), request.travelDate(), request.initialMemberId());
     }
 
     @PostMapping("/{groupId}/join")

@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.Optional;
 
 public interface GroupService {
-    Group createGroup(Long userId, String sourcePoint, String boardingStation, LocalDate travelDate);
+    Group createGroup(Long userId, String sourcePoint, String boardingStation, LocalDate travelDate, Long initialMemberId);
     void JoinGroup(Long groupId, Long userId);
 
     Optional<Group> findGroupForTripContext(String sourcePoint,String boardStation,LocalDate travelDate);
