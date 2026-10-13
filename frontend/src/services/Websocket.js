@@ -2,7 +2,7 @@ import { Client } from "@stomp/stompjs";
 import { getAccessToken } from "../utils/token";
 
 // Native WebSocket URL routed perfectly through your API Gateway!
-const WS_URL = "ws://localhost:8080/api/chat/ws";
+const WS_URL = "ws://localhost:8085/api/chat/ws";
 
 let stompClient = null;
 let connectionStatusCallback = null;
