@@ -41,7 +41,7 @@ export default function TripsPage() {
       .then((response) => {
         const mappedTrips = response.data.map(item => ({
           id: item.trip.id,
-          sourcePoint: item.trip.source,
+          sourcePoint: item.trip.sourcePoint,
            boardingStation: item.trip.boardingStation,
           finalDestination: item.trip.destination || "",
           travelDate: item.trip.travelDateTime.split('T')[0],
@@ -178,7 +178,7 @@ export default function TripsPage() {
                 <div className="trip-action">
                   <button
                     className="view-trip-btn"
-                    onClick={() => navigate("/view-details", { state: { trip } })}
+                    onClick={() => navigate(`/view-details/${trip.id}`, { state: { trip } })}
                   >
                     View trip
                   </button>

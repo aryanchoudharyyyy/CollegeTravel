@@ -56,7 +56,7 @@ function App() {
             <Route path='/post-trip' element={<PostTrip />} />
             <Route path='/trip-matches' element={<TripMatches />} />
              <Route path='/trips' element={<TripsPage />} />
-             <Route path='/view-details' element= {<TripDetailsPage />} />
+             <Route path='/view-details/:tripId' element= {<TripDetailsPage />} />
              <Route path='/chats' element={<ChatsPage />} />
              <Route path='/marketplace/chats' element={<MarketplaceChatsPage />} />
              <Route path='/safety' element={<SafetyGuidelinesPage />} />

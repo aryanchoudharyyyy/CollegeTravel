@@ -9,3 +9,17 @@ export const joinGroup = (groupId) =>{
 export const getMyGroups = () => {
     return apiClient.get("/api/groups/user");
 };
+
+export const findExistingGroup =  (sourcePoint, boardingStation, travelDate)=>{
+    return apiClient.get("/api/groups/existing", {
+        params: {sourcePoint, boardingStation, travelDate},
+    });
+};
+ export const getGroupMembers = (groupId) => {
+    return apiClient.get(`/api/groups/${groupId}/members`);
+};
+export const checkIsMember = (groupId, userId) => {
+    return apiClient.get(`/api/groups/${groupId}/is-member`, {
+        params: { userId },
+    });
+};

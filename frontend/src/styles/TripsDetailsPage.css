@@ -1,6 +1,6 @@
 /* =========================================================
    TRIP DETAILS PAGE
-   Standalone route (/trips/:id) — not a modal.
+   Standalone route (/view-details/:tripId)
    ========================================================= */
 
 .trip-detail-page {
@@ -11,26 +11,19 @@
 .trip-detail-container {
   width: 100%;
   max-width: 640px;
-
   margin-left: auto;
   margin-right: auto;
-
   padding: 48px 24px 64px;
 }
 
 .back-link {
   display: inline-flex;
   align-items: center;
-
   gap: 6px;
-
   color: var(--stone-600);
-
   font-size: 14px;
   font-weight: 500;
-
   text-decoration: none;
-
   transition: color 150ms;
 }
 
@@ -40,135 +33,239 @@
 
 .detail-card {
   margin-top: 20px;
-
   background-color: white;
-
   border: 1px solid var(--stone-200);
-
   border-radius: 8px;
-
   padding: 32px;
 }
-
-/* reused from TripsPage.css: .header-label (teal label + icon) */
 
 .trip-detail-route {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-
   gap: 10px;
-
   margin: 8px 0 0;
-
   color: var(--stone-900);
-
-  font-family: ui-serif, Georgia, Cambria,
-    "Times New Roman", Times, serif;
-
+  font-family: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
   font-size: 30px;
   line-height: 1.3;
-
   font-weight: 400;
 }
-
-/* reused from TripsPage.css: .trip-arrow (color: var(--stone-400)) */
 
 .trip-detail-list {
   display: flex;
   flex-direction: column;
-
   gap: 18px;
-
   margin-top: 28px;
-
   padding-top: 24px;
-
   border-top: 1px solid var(--stone-200);
 }
 
 .trip-detail-item {
   display: flex;
   align-items: flex-start;
-
   gap: 12px;
 }
 
 .trip-detail-icon {
   margin-top: 2px;
-
   color: var(--accent-600);
-
   flex-shrink: 0;
 }
 
 .trip-detail-item > div {
   display: flex;
   flex-direction: column;
-
   gap: 2px;
 }
 
 .trip-detail-label {
   color: var(--stone-500);
-
   font-size: 12px;
   font-weight: 500;
 }
 
 .trip-detail-value {
   color: var(--stone-900);
-
   font-size: 15px;
+}
+
+/* ─── Group Members Section ──────────────────────────── */
+
+.member-count {
+  margin: 8px 0 16px;
+  color: var(--stone-600);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.member-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.member-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  background-color: var(--stone-50, #fafaf9);
+  border: 1px solid var(--stone-200);
+  border-radius: 8px;
+}
+
+.member-avatar {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background-color: var(--accent-100, #ccfbf1);
+  color: var(--accent-700, #0f766e);
+  font-size: 14px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.member-name {
+  color: var(--stone-800);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.group-loading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+  color: var(--stone-500);
+  font-size: 14px;
+}
+
+.group-empty {
+  margin-top: 8px;
+  color: var(--stone-500);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* ─── Actions Card ───────────────────────────────────── */
+
+.actions-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.join-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 13px 16px;
+  border: 0;
+  border-radius: 6px;
+  background-color: var(--accent-600);
+  color: white;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 150ms, opacity 150ms;
+}
+
+.join-btn:hover:not(:disabled) {
+  background-color: var(--accent-700);
+}
+
+.join-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.joined-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 13px 16px;
+  border: 1.5px solid var(--accent-600);
+  border-radius: 6px;
+  background-color: var(--accent-50, #f0fdfa);
+  color: var(--accent-700, #0f766e);
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.join-success {
+  text-align: center;
+  color: var(--accent-700, #0f766e);
+  font-size: 14px;
+  font-weight: 500;
+  padding: 4px 0;
 }
 
 .chat-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-
   gap: 8px;
-
   width: 100%;
-
-  margin-top: 32px;
-
   padding: 13px 16px;
-
-  border: 0;
+  border: 1px solid var(--stone-200);
   border-radius: 6px;
-
-  background-color: var(--accent-600);
-
-  color: white;
-
+  background-color: white;
+  color: var(--stone-800);
   font-size: 15px;
   font-weight: 500;
-
   cursor: pointer;
-
-  transition: background-color 150ms;
+  transition: background-color 150ms, border-color 150ms;
 }
 
 .chat-btn:hover {
-  background-color: var(--accent-700);
+  background-color: var(--stone-50, #fafaf9);
+  border-color: var(--stone-300);
+}
+
+/* ─── Loading & Error States ─────────────────────────── */
+
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin-top: 120px;
+  color: var(--stone-500);
+  font-size: 15px;
 }
 
 .not-found-card {
   margin-top: 20px;
-
   background-color: white;
-
   border: 1px solid var(--stone-200);
-
   border-radius: 8px;
-
   padding: 40px 24px;
-
   text-align: center;
-
   color: var(--stone-500);
 }
+
+/* ─── Spinner ────────────────────────────────────────── */
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.spinner {
+  animation: spin 0.8s linear infinite;
+}
+
+/* ─── Responsive ─────────────────────────────────────── */
 
 @media (max-width: 480px) {
   .trip-detail-container {
