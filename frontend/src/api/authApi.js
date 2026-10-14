@@ -20,3 +20,6 @@ export const logout = (refreshToken) =>{
     return apiClient.post("api/users/logout", {refreshToken});
 
 };
+export const updateProfile = (data) =>{
+    return apiClient.put("api/users/me", data);
+}

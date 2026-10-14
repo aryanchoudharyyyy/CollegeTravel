@@ -1,28 +1,24 @@
-import { useState } from "react";
-import { User, Mail, MapPin, GraduationCap, ShieldCheck, Settings, ArrowLeft, LockKeyhole } from "lucide-react";
+import { useState, useEffect } from "react";
+import { User, Mail, MapPin, GraduationCap, ShieldCheck, Settings, ArrowLeft, LockKeyhole, Verified } from "lucide-react";
 import "../styles/Profile.css";
+import { getCurrentUser, updateProfile } from "../api/authApi";
+import { getMyTrips } from "../api/tripApi";
+import { getMyGroups } from "../api/groupApi";
 
-const initialUser = {
-    name: "Aryan Choudhary",
-    email: "aryan@campus.edu",
-    college: "KIET Deemed to be University",
-    location: "Ghaziabad, Uttar Pradesh",
-    course: "Information Technology",
-    year: "4th Year",
-    graduationYear: "2027",
-    verified: true,
-};
+const yearOptions = ["1st Year", "2nd Year", "3rd Year", "4th Year"];
 
-const travelStats = [
-    { label: "Trips joined", value: 12 },
-    { label: "Trips created", value: 5 },
-    { label: "Groups joined", value: 8 },
-];
-
-
-
-
-const yearOptions = ["1st Year", "2nd Year", "3rd Year", "4th Year", "5th Year"];
+function getGraduationYear(studyYear){
+    const currentYear = new Date().getFullYear();
+    const match = String(studyYear).match(/\d+/);
+    const yr = match ? parseInt(match[0]):1;
+    return String(currentYear + (4-yr));
+}
+function getCollegeFallback(email){
+    if(!email) return "College Campus";
+    const domain = email.split("@")[1]?.toLowerCase() || "";
+    if(domain.includes("kiet")) return "KIET Deemed To Be University";
+    return domain.split(".")[0].toUpperCase();
+}
 
 function maskEmail(email) {
     const [user, domain] = email.split("@");
@@ -41,15 +37,72 @@ function getInitials(name) {
 
 function Profile() {
     const [editing, setEditing] = useState(false);
-    const [userData, setUserData] = useState(initialUser);
+    const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
+
+    const [userData, setUserData] = useState({
+        name: "",
+        email: "",
+        college: "",
+        location: "",
+        course: "",
+        year: "1st Year",
+        graduationYear: "",
+        verified: false,
+
+    });
+    const [stats, setStats] = useState({
+        tripsCreated: 0,
+        groupsJoined: 0,
+    });
 
     // Draft state for editable fields
-    const [draftName, setDraftName] = useState(userData.name);
-    const [draftYear, setDraftYear] = useState(userData.year);
+    const [draftName, setDraftName] = useState("");
+    const [draftYear, setDraftYear] = useState("1st Year");
+    const [draftCollege, setDraftCollege] = useState("");
+    const [draftLocation, setDraftLocation]  = useState("");
+    const [draftGraduationYear, setDraftGraduationYear] = useState("");
+    // Load user data & real stats from backend
+    useEffect(() => {
+        getCurrentUser()
+            .then((res) => {
+                const u = res.data;
+                const gradYear = u.graduationYear || getGraduationYear(u.year);
+                const loadedData = {
+                    name: u.name || "",
+                    email: u.collegeEmail || "",
+                    college: u.college || getCollegeFallback(u.collegeEmail),
+                    location: u.location || "Not set yet",
+                    course: u.branch || "General",
+                    year: u.year || "1st Year",
+                    graduationYear: gradYear,
+                    verified: u.verified ?? false,
+                };
+                setUserData(loadedData);
+                setDraftName(loadedData.name);
+                setDraftYear(loadedData.year);
+                setDraftCollege(loadedData.college);
+                setDraftLocation(u.location || "");
+                setDraftGraduationYear(gradYear);
+            })
+            .catch((err) => console.error("Failed to load user profile:", err))
+            .finally(() => setLoading(false));
+        // Real travel stats
+        getMyTrips()
+            .then((res) => setStats((prev) => ({ ...prev, tripsCreated: res.data?.length || 0 })))
+            .catch(() => {});
+        getMyGroups()
+            .then((res) => setStats((prev) => ({ ...prev, groupsJoined: res.data?.length || 0 })))
+            .catch(() => {});
+    }, []);    
 
     function handleEdit() {
         setDraftName(userData.name);
         setDraftYear(userData.year);
+        setDraftCollege(userData.college);
+        setDraftLocation(userData.location === "Not set yet" ? "" : userData.location);
+        setDraftGraduationYear(userData.graduationYear);
+        
         setEditing(true);
     }
 
@@ -57,10 +110,43 @@ function Profile() {
         setEditing(false);
     }
 
-    function handleSave() {
-        setUserData((prev) => ({ ...prev, name: draftName, year: draftYear }));
+  async  function handleSave() {
+       try {
+        setSaving(true);
+        const res = await updateProfile({
+            name: draftName,
+            year: draftYear,
+            college: draftCollege,
+            location: draftLocation,
+            graduationYear: draftGraduationYear,
+        });
+        setUserData((prev) => ({
+           ...prev,
+           name: res.data.name,
+           year: res.data.year || draftYear,
+           college: res.data.college || draftCollege,
+           location: res.data.location || draftLocation || "Not set yet",
+           graduationYear: res.data.graduationYear || draftGraduationYear,
+
+        }));
         setEditing(false);
+       } catch (error) {
+        console.error("Failed to update profile:", error);
+        alert("Failed to update profile. Please try again");
+        
+       }
+       finally{
+        setSaving(false);
+       }
     }
+    if(loading){
+        return(
+            <div className="pr-page" style={{ textAlign: "center", paddingTop: "80px"}}>
+                <p>Loading Profile...</p>
+            </div>
+        );
+    }
+
 
     // ── Edit Profile View ──
     if (editing) {
@@ -112,6 +198,16 @@ function Profile() {
                         />
                         <span className="pr-field-hint">College email cannot be changed</span>
                     </div>
+                      <div className="pr-field">
+                        <label className="pr-field-label">Home Location / City</label>
+                        <input
+                            className="pr-field-input"
+                            type="text"
+                            placeholder="e.g., Ghaziabad, Uttar Pradesh"
+                            value={draftLocation}
+                            onChange={(e) => setDraftLocation(e.target.value)}
+                        />
+                    </div>
                 </div>
 
                 {/* College Information */}
@@ -121,13 +217,14 @@ function Profile() {
                     <div className="pr-field">
                         <label className="pr-field-label">
                             College
-                            <LockKeyhole size={12} className="pr-lock-icon" />
+                            
                         </label>
                         <input
-                            className="pr-field-input pr-field-locked"
+                            className="pr-field-input"
                             type="text"
-                            value={userData.college}
-                            disabled
+                            value={draftCollege}
+                            onChange={(e)=> setDraftCollege(e.target.value)}
+                            
                         />
                     </div>
 
@@ -160,21 +257,23 @@ function Profile() {
                     <div className="pr-field">
                         <label className="pr-field-label">
                             Graduation Year
-                            <LockKeyhole size={12} className="pr-lock-icon" />
+                            {/* <LockKeyhole size={12} className="pr-lock-icon" /> */}
                         </label>
                         <input
-                            className="pr-field-input pr-field-locked"
+                            className="pr-field-input"
                             type="text"
-                            value={userData.graduationYear}
-                            disabled
+                            placeholder="e.g., 2027"
+                            value={draftGraduationYear}
+                            onChange={(e)=> setDraftGraduationYear(e.target.value)}
+                            
                         />
                     </div>
                 </div>
 
                 {/* Action Buttons */}
                 <div className="pr-edit-actions animate-in" style={{ animationDelay: "0.2s" }}>
-                    <button className="pr-btn-cancel" onClick={handleCancel}>Cancel</button>
-                    <button className="pr-btn-save" onClick={handleSave}>Save Changes</button>
+                    <button className="pr-btn-cancel" onClick={handleCancel} disabled={saving}>Cancel</button>
+                    <button className="pr-btn-save" onClick={handleSave} disabled={saving}>{saving ? "Saving..." : "Save Changes"}</button>
                 </div>
             </div>
         );
@@ -232,18 +331,24 @@ function Profile() {
                             <span className="pr-info-label">Year</span>
                             <span className="pr-info-value">{userData.year}</span>
                         </div>
+                        <div className="pr-info-row">
+                        <span className="pr-info-label">Graduation Year</span>
+                        <span className="pr-info-value">{userData.graduationYear}</span>
+                        </div>
                     </div>
                 </div>
 
                 <div className="pr-card">
                     <h3>Travel stats</h3>
-                    <div className="pr-stats-list">
-                        {travelStats.map((stat) => (
-                            <div className="pr-stat-row" key={stat.label}>
-                                <span className="pr-info-label">{stat.label}</span>
-                                <span className="pr-stat-value">{stat.value}</span>
-                            </div>
-                        ))}
+                   <div className="pr-stats-list">
+                        <div className="pr-stat-row">
+                            <span className="pr-info-label">Trips created</span>
+                            <span className="pr-stat-value">{stats.tripsCreated}</span>
+                        </div>
+                        <div className="pr-stat-row">
+                            <span className="pr-info-label">Groups joined</span>
+                            <span className="pr-stat-value">{stats.groupsJoined}</span>
+                        </div>
                     </div>
                 </div>
             </div>
