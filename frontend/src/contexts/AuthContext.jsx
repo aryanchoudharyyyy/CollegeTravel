@@ -10,7 +10,7 @@ export function AuthProvider({ children }){
 
     useEffect(()=>{
         const token = getAccessToken();
-        if(token){
+        if(token && isLoggedIn){
             getCurrentUser()
             .then((response) => {
                 setUser(response.data);
@@ -20,7 +20,7 @@ export function AuthProvider({ children }){
             });
 
         }
-    }, []);
+    }, [isLoggedIn]);
     return (
         <AuthContext.Provider value={{ isLoggedIn, setIsLoggedIn, email, setEmail, user, setUser }}>
             {children}

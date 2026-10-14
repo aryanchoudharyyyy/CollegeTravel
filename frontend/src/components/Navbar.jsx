@@ -9,10 +9,15 @@ import { logout } from "../api/authApi";
 
 
 function Navbar(){
-    const {setIsLoggedIn}= useAuth();
+    const {setIsLoggedIn, user}= useAuth();
     const navigate = useNavigate();
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const dropdownRef = useRef(null);
+    const getInitials = (name) =>{
+        if(!name) return "";
+        return name.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0,2);
+
+    };
 async function handleLogout(){
         try {
             const refreshToken = getRefreshToken();
@@ -59,9 +64,17 @@ async function handleLogout(){
            <div className="nav-profile-container" ref={dropdownRef}>
             <button className="profile-btn" onClick={()=> setIsDropdownOpen(!isDropdownOpen)}>
                 <div className="profile-avatar">
-                    <User size={16} />
+               {user?.name ? (
+                <span style = {{fontSize: "11px", fontWeight: "600", textTransform: "upperCase" }}>
+                    {getInitials(user.name)}
+                </span>
+               ):(
+                <User size={14} />
+               )}
+                    
                 </div>
-                Aryan 
+                <span>{user?.name || "User"}</span>
+               
                 <ChevronDown size={14} style={{marginLeft:"4px", color: "var(--text-tertiary)"}} />
             </button>
             {isDropdownOpen && (

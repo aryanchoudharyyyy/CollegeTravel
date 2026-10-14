@@ -51,17 +51,18 @@ async  function handleVerify(e) {
     e.preventDefault();
     const otpValue = otp.join("");
 
-    
+     
   try {
     const response = await verifyOtp(collegeEmail,otpValue);
     
-    // AuthContext me user ko logged in mark karein
-    setIsLoggedIn(true);
-    
+   
     // Tokens ko save karein using our setTokens utility
     if (response.data?.accessToken && response.data?.refreshToken) {
         setTokens(response.data.accessToken, response.data.refreshToken);
     }
+     // AuthContext me user ko logged in mark karein
+    setIsLoggedIn(true);
+    
     
     navigate("/home");
   } catch (error) {
