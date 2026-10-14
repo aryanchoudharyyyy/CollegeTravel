@@ -1,9 +1,6 @@
 package com.CollegeTravel.user_service.controller;
 
-import com.CollegeTravel.user_service.dto.Request.LoginRequest;
-import com.CollegeTravel.user_service.dto.Request.RefreshTokenRequest;
-import com.CollegeTravel.user_service.dto.Request.SignupRequest;
-import com.CollegeTravel.user_service.dto.Request.VerifyOtpRequest;
+import com.CollegeTravel.user_service.dto.Request.*;
 import com.CollegeTravel.user_service.dto.Response.AuthResponse;
 import com.CollegeTravel.user_service.dto.Response.UserResponseDTO;
 import com.CollegeTravel.user_service.dto.Response.UserSummaryDTO;
@@ -76,6 +73,12 @@ public class UserController {
         refreshTokenService.revokeToken(request.refreshToken());
         return "Logged out successfully";
     }
+    @PutMapping("/me")
+    public UserResponseDTO updateProfile(@Valid @RequestBody UpdateProfileRequest request,Authentication authentication){
+        User updated =userService.updateProfile(authentication.getName(), request);
+        return UserResponseDTO.fromEntity(updated);
+    }
+
 
 
 }

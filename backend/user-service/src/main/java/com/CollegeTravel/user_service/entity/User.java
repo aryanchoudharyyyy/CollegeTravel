@@ -25,4 +25,9 @@ public class User {
     @Column(nullable = false)
     private boolean verified;
 
+    private String college;
+    private String location;
+    private String graduationYear;
+
+
 }

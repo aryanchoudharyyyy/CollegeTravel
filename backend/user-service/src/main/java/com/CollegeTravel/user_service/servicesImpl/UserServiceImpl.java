@@ -1,5 +1,6 @@
 package com.CollegeTravel.user_service.servicesImpl;
 
+import com.CollegeTravel.user_service.dto.Request.UpdateProfileRequest;
 import com.CollegeTravel.user_service.dto.Response.UserSummaryDTO;
 import com.CollegeTravel.user_service.entity.User;
 import com.CollegeTravel.user_service.exception.UserNotFoundException;
@@ -46,6 +47,28 @@ public class UserServiceImpl implements UserService {
         return userRepository.findByIdIn(userIds).stream()
                 .filter(u->u.getCollegeEmail() !=null)
                 .collect(Collectors.toMap(User::getId, User::getCollegeEmail, (existing, replacement) -> existing));
+    }
+
+    @Override
+    public User updateProfile(String collegeEmail, UpdateProfileRequest request) {
+        User user = getByCollegeEmail(collegeEmail);
+        if(request.name() != null && !request.name().trim().isEmpty()){
+            user.setName(request.name().trim());
+
+        }
+        if (request.year() != null && !request.year().trim().isEmpty()){
+            user.setYear(request.year().trim());
+        }
+        if (request.college()!= null && !request.college().trim().isEmpty()){
+            user.setCollege(request.college().trim());
+        }
+        if (request.location()!= null && !request.location().trim().isEmpty()){
+            user.setLocation(request.location().trim());
+        }
+        if (request.graduationYear()!=null && !request.graduationYear().trim().isEmpty()){
+            user.setGraduationYear(request.graduationYear().trim());
+        }
+        return userRepository.save(user);
     }
 
 }
