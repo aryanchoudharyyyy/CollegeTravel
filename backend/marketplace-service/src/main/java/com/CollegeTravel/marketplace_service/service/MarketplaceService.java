@@ -19,4 +19,5 @@ public interface MarketplaceService {
     void expressInternet(Long listingId, Long userId);
     Page<String> getInterestedUsers(Long listingId, Long ownerUserId,Pageable pageable);
     Long getListingOwner(Long listingId);
+    ListingResponse getListingById(Long listingId);
 }

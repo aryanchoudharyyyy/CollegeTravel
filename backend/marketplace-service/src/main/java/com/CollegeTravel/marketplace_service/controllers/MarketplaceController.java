@@ -57,5 +57,9 @@ public class MarketplaceController {
             @PageableDefault(size = 20) Pageable pageable) {
         return marketplaceService.getInterestedUsers(listingId, (Long) httpServletRequest.getAttribute("userId"),pageable);
     }
+    @GetMapping("/listings/{listingId}")
+    public ListingResponse getListingById(@PathVariable Long listingId) {
+        return marketplaceService.getListingById(listingId);
+    }
 
 }

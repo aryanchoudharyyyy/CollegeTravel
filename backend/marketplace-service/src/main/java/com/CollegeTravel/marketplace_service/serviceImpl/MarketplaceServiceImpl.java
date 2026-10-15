@@ -129,6 +129,15 @@ public class MarketplaceServiceImpl implements MarketplaceService {
                 .getPostedByUserId();
     }
 
+    @Override
+    public ListingResponse getListingById(Long listingId) {
+        TicketListing listing = listingRepository.findById(listingId)
+                .orElseThrow(()->new ListingNotFoundException("Listing not found:" + listingId));
+        List<InterestCountProjection> counts = interestRepository.countInterestsByListingIds(List.of(listingId));
+        int count = counts.isEmpty() ? 0 : counts.get(0).getCount();
+        return toResponse(listing, Map.of(listing.getId(), count));
+    }
+
     private TicketListing getOwnedListing(Long listingId, Long userId){
         TicketListing listing = listingRepository.findById(listingId)
                 .orElseThrow(

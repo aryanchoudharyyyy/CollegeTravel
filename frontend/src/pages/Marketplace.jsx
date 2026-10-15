@@ -2,42 +2,27 @@ import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Search, LayoutGrid, TrainFront, BusFront, ArrowDownUp, ChevronDown, MoveRight, Clock, ArrowRight, Calendar } from "lucide-react";
 import "../styles/Marketplace.css";
+import { browseListings } from "../api/marketplaceApi";
 
-const mockListings = [
-    { 
-        id: 1, 
-        postedByUserId: 101,
-        listingType: "TRAIN", 
-        status: "OPEN",
-        ticketClass: "Sleeper",
-        source: "Noida", 
-        destination: "Delhi",
-        travelDate: "27 May", 
-        price: 120,
-        quantity: 1,
-        description: "Vande Bharat Express",
-        active: true,
-        postedAt: "2h ago",
-        interestCount: 3
-    },
-    { 
-        id: 2, 
-        postedByUserId: 102,
-        listingType: "BUS", 
-        status: "OPEN",
-        ticketClass: "AC Seater",
-        source: "Ghaziabad", 
-        destination: "Delhi",
-        travelDate: "28 May", 
-        price: 100,
-        quantity: 2,
-        description: "Volvo Premium Bus",
-        active: true,
-        postedAt: "5h ago",
-        interestCount: 1
+function formatTimeAgo(dateString){
+    if(!dateString) return "Recently";
+    const date = new Date(dateString);
+    const diffMs = Date.now()-date.getTime();
+    const diffHours = Math.floor(diffMs / (1000*60*60));
+    if(diffHours<1) return "Just now";
+    if(diffHours<24) return `${diffHours}h ago`;
+    const diffDays = Math.floor(diffHours/24);
+    return `${diffDays}d ago`;
+}
+function formatTravelDate(dateString) {
+    if (!dateString) return "";
+    try {
+        const d = new Date(dateString);
+        return d.toLocaleDateString("en-US", { day: "numeric", month: "short" });
+    } catch {
+        return dateString;
     }
-];
-
+}
 function Marketplace(){
     const[searchQuery, setSearchQuery] = useState("");
     const navigate = useNavigate();
@@ -45,6 +30,8 @@ function Marketplace(){
     const [sortOrder, setSortOrder] = useState("newest");
     const [showSortOptions, setShowSortOptions] = useState(false);
     const dropdownRef = useRef(null);
+    const [listings, setListings] = useState([]);
+    const [loading, setLoading] = useState(true);
 
     // Close dropdown when clicking outside
     useEffect(() => {
@@ -57,6 +44,20 @@ function Marketplace(){
         return () => {
             document.removeEventListener("mousedown", handleClickOutside);
         };
+    }, []);
+      // Fetch live listings from backend
+    useEffect(() => {
+        setLoading(true);
+        browseListings()
+            .then((res) => {
+                // Spring Page object has content in res.data.content or res.data
+                const items = res.data?.content || res.data || [];
+                setListings(items);
+            })
+            .catch((err) => {
+                console.error("Failed to load marketplace listings:", err);
+            })
+            .finally(() => setLoading(false));
     }, []);
     
     return(
@@ -148,78 +149,93 @@ function Marketplace(){
                 </div>
             </div>
 
-            <div className="list-card-container" style={{marginTop: "40px"}}>
-                {mockListings .filter((item) => {
-        const searchStr = `${item.source} ${item.destination} ${item.description}`.toLowerCase();
+                    <div className="list-card-container" style={{ marginTop: "40px" }}>
+                {loading ? (
+                    <div style={{ textAlign: "center", padding: "40px", color: "var(--text-tertiary)" }}>
+                        Loading tickets...
+                    </div>
+                ) : listings.length === 0 ? (
+                    <div style={{ textAlign: "center", padding: "40px" }}>
+                        <p style={{ color: "var(--text-secondary)", marginBottom: "16px" }}>
+                            No tickets currently listed in the marketplace.
+                        </p>
+                        <button className="btn btn-primary" onClick={() => navigate("/marketplace/create")}>
+                            + Sell the first ticket
+                        </button>
+                    </div>
+                ) : (
+                    listings
+                        .filter((item) => {
+                            const searchStr = `${item.source} ${item.destination} ${item.description}`.toLowerCase();
+                            const matchesSearch = searchStr.includes(searchQuery.toLowerCase());
 
-        const matchesSearch = searchStr.includes(searchQuery.toLowerCase());
+                            const matchesFilter =
+                                activeFilter === "All"
+                                    ? true
+                                    : activeFilter === "TRAIN"
+                                    ? item.listingType === "TRAIN_TICKET" || item.listingType === "TRAIN"
+                                    : item.listingType === "BUS_TICKET" || item.listingType === "BUS";
 
-        const matchesFilter =
-            activeFilter === "All"
-                ? true
-                : item.listingType === activeFilter;
+                            return matchesSearch && matchesFilter;
+                        })
+                        .sort((a, b) => {
+                            const timeA = new Date(a.postedAt || 0).getTime();
+                            const timeB = new Date(b.postedAt || 0).getTime();
+                            return sortOrder === "newest" ? timeB - timeA : timeA - timeB;
+                        })
+                        .map((item, index) => (
+                            <div 
+                                className="trip-card animate-in" 
+                                key={item.id} 
+                                onClick={() => navigate("/marketplace/" + item.id)} 
+                                style={{ animationDelay: `${0.25 + (index * 0.1)}s`, cursor: 'pointer' }}
+                            >
+                                <div className="trip-main">
+                                    <h2 className="trip-title">
+                                        {item.source}
+                                        <ArrowRight size={18} className="trip-arrow" />
+                                        {item.destination}
+                                    </h2>
+                                    
+                                    <p className="trip-description">
+                                        {item.description} &bull; Class: {item.ticketClass}
+                                    </p>
 
-        return matchesSearch && matchesFilter;
-    })
-    .sort((a, b) => {
-        const timeA = parseInt(a.postedAt);
-        const timeB = parseInt(b.postedAt);
+                                    <div className="trip-meta">
+                                        <span className="trip-meta-item">
+                                            <Calendar size={15} />
+                                            {formatTravelDate(item.travelDate)}
+                                        </span>
+                                        <span>
+                                            Posted {formatTimeAgo(item.postedAt)}
+                                        </span>
+                                    </div>
+                                </div>
 
-        return sortOrder === "newest"
-            ? timeA - timeB
-            : timeB - timeA;
-    })
-                    .map((item, index) => (
-                        <div 
-                            className="trip-card animate-in" 
-                            key={item.id} 
-                            onClick={() => navigate("/marketplace/" + item.id)} 
-                            style={{ animationDelay: `${0.25 + (index * 0.1)}s`, cursor: 'pointer' }}
-                        >
-                            <div className="trip-main">
-                                <h2 className="trip-title">
-                                    {item.source}
-                                    <ArrowRight size={18} className="trip-arrow" />
-                                    {item.destination}
-                                </h2>
-                                
-                                <p className="trip-description">
-                                    {item.description} &bull; Class: {item.ticketClass}
-                                </p>
+                                <div className="trip-perforation">
+                                    <span className="perforation-circle top" />
+                                    <span className="perforation-circle bottom" />
+                                </div>
 
-                                <div className="trip-meta">
-                                    <span className="trip-meta-item">
-                                        <Calendar size={15} />
-                                        {item.travelDate}
-                                    </span>
-                                    <span>
-                                        Posted {item.postedAt}
-                                    </span>
+                                <div className="trip-action">
+                                    <div style={{ fontSize: '20px', fontWeight: 'bold', color: 'var(--stone-900)', fontFamily: 'ui-serif, Georgia, Cambria, "Times New Roman", Times, serif' }}>
+                                        ₹{item.price}
+                                    </div>
+                                    <button
+                                        className="view-trip-btn"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            navigate("/marketplace/" + item.id);
+                                        }}
+                                    >
+                                        View details
+                                    </button>
                                 </div>
                             </div>
-
-                            <div className="trip-perforation">
-                                <span className="perforation-circle top" />
-                                <span className="perforation-circle bottom" />
-                            </div>
-
-                            <div className="trip-action">
-                                <div style={{ fontSize: '20px', fontWeight: 'bold', color: 'var(--stone-900)', fontFamily: 'ui-serif, Georgia, Cambria, "Times New Roman", Times, serif' }}>
-                                    ₹{item.price}
-                                </div>
-                                <button
-                                    className="view-trip-btn"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        navigate("/marketplace/" + item.id);
-                                    }}
-                                >
-                                    View details
-                                </button>
-                            </div>
-                        </div>
-                    ))}
+                        ))
+                )}
             </div>
+            
         </div>
     );
 }

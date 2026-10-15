@@ -13,15 +13,57 @@ import {
   ArrowLeft,
 } from "lucide-react";
 import "../styles/CreateListing.css";
+import { createListing } from "../api/marketplaceApi";
+
 
 function CreateListing() {
   const navigate = useNavigate();
   const [listingType, setListingType] = useState("TRAIN");
-
-  const handleSubmit = (e) => {
+  const [source, setSource] = useState("");
+  const [destination, setDestination] = useState("");
+  const [description, setDescription] = useState("");
+  const [travelDate, setTravelDate] = useState("");
+  const [ticketClass, setTicketClass] = useState("Sleeper");
+  const [quantity, setQuantity] = useState(1);
+  const [price, setPrice] = useState("");
+  const [ticketStatus, setTicketStatus] =  useState("CONFIRMED");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
+  const handleTypeSelect = (type) => {
+    setListingType(type);
+    setTicketClass(type === "TRAIN" ? "Sleeper" : "AC Seater");
+  };
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("Form Submitted! API lagne ke baad data backend pe jayega.");
-    navigate("/marketplace");
+    setError("");
+    setSubmitting(true);
+    try {
+      const payLoad = {
+        listingType: listingType === "TRAIN" ? "TRAIN_TICKET" : "BUS_TICKET",
+        status: ticketStatus,
+        ticketClass: ticketClass,
+        source: source.trim(),
+        destination: destination.trim(),
+        travelDate: travelDate,
+        price: parseFloat(price),
+        quantity: parseInt(quantity, 10),
+        description: description.trim(),
+      };
+      await createListing(payLoad);
+      navigate("/marketplace");
+
+
+    } catch (err) {
+      console.error("Failed to post ticket:", err);
+      setError(
+        err.response?.data?.message || 
+        "Failed to post ticket listing. Please make sure all details are correct."
+      );
+      
+    }finally{
+      setSubmitting(false);
+    }
+  
   };
 
   return (
@@ -73,7 +115,7 @@ function CreateListing() {
               <button
                 type="button"
                 className={`cl-type-btn ${listingType === "TRAIN" ? "active-train" : ""}`}
-                onClick={() => setListingType("TRAIN")}
+                onClick={() => handleTypeSelect("TRAIN")}
               >
                 <div className="cl-type-icon-wrap">
                   <TrainFront size={22} />
@@ -87,7 +129,7 @@ function CreateListing() {
               <button
                 type="button"
                 className={`cl-type-btn ${listingType === "BUS" ? "active-bus" : ""}`}
-                onClick={() => setListingType("BUS")}
+                onClick={() => handleTypeSelect("BUS")}
               >
                 <div className="cl-type-icon-wrap">
                   <BusFront size={22} />
@@ -114,14 +156,16 @@ function CreateListing() {
                 <label className="cl-label">Source City</label>
                 <div className="cl-input-wrapper">
                   <MapPin size={18} className="cl-input-icon text-blue" />
-                  <input type="text" placeholder="e.g., Noida (NDLS)" className="cl-input" required />
+                  <input type="text" placeholder="e.g., Noida (NDLS)" className="cl-input"
+                  value={source} onChange={(e) => setSource(e.target.value)} required />
                 </div>
               </div>
               <div className="cl-input-group">
                 <label className="cl-label">Destination City</label>
                 <div className="cl-input-wrapper">
                   <MapPin size={18} className="cl-input-icon text-green" />
-                  <input type="text" placeholder="e.g., Delhi" className="cl-input" required />
+                  <input type="text" placeholder="e.g., Delhi" className="cl-input" 
+                  value={destination} onChange={(e) => setDestination(e.target.value)}  required />
                 </div>
               </div>
             </div>
@@ -144,6 +188,8 @@ function CreateListing() {
                 type="text"
                 placeholder="e.g., Vande Bharat Express (22439)"
                 className="cl-input"
+                value={description} 
+                onChange={(e) => setDescription(e.target.value)}
                 required
               />
             </div>
@@ -153,13 +199,19 @@ function CreateListing() {
                 <label className="cl-label">Travel Date</label>
                 <div className="cl-input-wrapper">
                   <Calendar size={18} className="cl-input-icon" />
-                  <input type="date" className="cl-input" required />
+                  <input type="date" className="cl-input" 
+                  value={travelDate}
+
+                  onChange={(e)=> setTravelDate(e.target.value)} required />
                 </div>
               </div>
 
               <div className="cl-input-group">
                 <label className="cl-label">Ticket Class</label>
-                <select className="cl-input cl-select">
+                <select className="cl-input cl-select"
+                 value={ticketClass}
+                  onChange={(e) => setTicketClass(e.target.value)}
+                >
                   {listingType === "TRAIN" ? (
                     <>
                       <option value="Sleeper">Sleeper (SL)</option>
@@ -182,7 +234,8 @@ function CreateListing() {
                 <label className="cl-label">Quantity</label>
                 <div className="cl-input-wrapper">
                   <Hash size={18} className="cl-input-icon" />
-                  <input type="number" min="1" max="10" defaultValue="1" className="cl-input" onWheel={(e) => e.target.blur()} required />
+                  <input type="number" min="1" max="10" defaultValue="1" className="cl-input" onWheel={(e) => e.target.blur()}
+                  value={quantity} onChange={(e) => setQuantity(e.target.value)} required />
                 </div>
               </div>
             </div>
@@ -217,6 +270,7 @@ function CreateListing() {
                         e.preventDefault();
                       }
                     }}
+                    value={price} onChange={(e)=> setPrice(e.target.value)}
                     required 
                   />
                 </div>
@@ -229,15 +283,18 @@ function CreateListing() {
             <Info size={16} className="cl-info-icon" />
             <p>Your listing will be visible to all campus students. You'll be notified when someone expresses interest.</p>
           </div>
+          
 
+          {error && <div style={{ color: "var(--status-danger, #ef4444)", marginBottom: "16px", fontWeight: "500", fontSize: "14px" }}>{error}</div>}
           {/* ── Action Buttons ── */}
+
           <div className="cl-actions">
             <button type="button" className="cl-btn-cancel" onClick={() => navigate("/marketplace")}>
               <ArrowLeft size={16} />
               Cancel
             </button>
-            <button type="submit" className="cl-btn-submit">
-              Post Listing
+          <button type="submit" className="cl-btn-submit" disabled={submitting}>
+              {submitting? "Posting..." : "Post Listing"}
             </button>
           </div>
 
