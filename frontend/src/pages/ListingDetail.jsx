@@ -69,13 +69,20 @@ function ListingDetail() {
       setActionLoading(false);
     }
   };
-    const handleChatWithSeller = async () => {
+      const handleChatWithSeller = async () => {
     try {
       setActionLoading(true);
       const res = await startListingConversation(id);
-      // Backend returns ListingConversation { id, listingId, buyerId, ... }
       const conversationId = res.data.id;
-      navigate(`/marketplace/chats?conversation=${conversationId}`);
+      navigate(`/marketplace/chats?conversation=${conversationId}`, {
+        state: {
+          conversationId: conversationId,
+          listingId: listing.id,
+          listingTitle: listing.description,
+          otherUserId: listing.postedByUserId,
+          otherUserName: `User #${listing.postedByUserId}`,
+        }
+      });
     } catch (err) {
       console.error("Failed to start chat with seller:", err);
       alert(err.response?.data?.message || "Could not start chat with seller");

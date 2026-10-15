@@ -1,12 +1,12 @@
 import { useEffect, useState, useRef } from "react";
-import { useSearchParams, useNavigate } from "react-router-dom";
+import { useSearchParams, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import ChatComposer from "./ChatComposer";
-// import {
-//   connectMarketplaceWebSocket,
-//   sendMarketplaceMessage,
-//   disconnectMarketplaceWebSocket,
-// } from "../services/MarketplaceWebsocket";
+import { connectMarketplaceWebsocket, 
+  sendMarketplaceMessage,
+  disconnectMarketplaceWebSocket
+ } from "../services/marketPlaceWebsocket";
+ import { getListingChatHistory } from "../api/marketplaceApi";
 import {
   ArrowLeft,
   Send,
@@ -96,8 +96,8 @@ function MessageBubble({ msg, isGrouped, isOwn, userName }) {
     ? userName.slice(0, 2).toUpperCase()
     : `U${msg.senderId}`;
 
-  const timeString = msg.sendAt
-    ? new Date(msg.sendAt).toLocaleTimeString([], {
+  const timeString = (msg.sentAt || msg.sendAt)
+    ? new Date(msg.sentAt || msg.sendAt).toLocaleTimeString([], {
         hour: "numeric",
         minute: "2-digit",
       })
@@ -282,6 +282,7 @@ function EmptyState() {
 export default function MarketplaceChatsPage() {
   const { user } = useAuth();
   const [searchParams] = useSearchParams();
+  const location = useLocation();
 
   const [selectedConversation, setSelectedConversation] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -296,17 +297,17 @@ export default function MarketplaceChatsPage() {
   const newListingIdFromUrl = searchParams.get("new_listing");
   const newSellerIdFromUrl = searchParams.get("seller");
 
-  // Manage mock conversations list with localStorage persistence
+ 
   const [conversations, setConversations] = useState(() => {
     const saved = localStorage.getItem("marketplace_conversations");
     if (saved) {
       try {
         return JSON.parse(saved);
       } catch (e) {
-        return MOCK_CONVERSATIONS;
+        return [];
       }
     }
-    return MOCK_CONVERSATIONS;
+    return [];
   });
 
   useEffect(() => {
@@ -314,62 +315,61 @@ export default function MarketplaceChatsPage() {
   }, [conversations]);
 
   useEffect(() => {
-    if (conversationIdFromUrl) {
-      const matchedConv = conversations.find(
-        (c) => c.conversationId === parseInt(conversationIdFromUrl)
-      );
-      if (matchedConv) {
-        setSelectedConversation(matchedConv);
+    const convId = conversationIdFromUrl ? parseInt(conversationIdFromUrl) : null;
+    if (convId) {
+      const existing = conversations.find(
+        (c) => c.conversationId === convId);
+        if(existing) setSelectedConversation(existing);
+        else{
+          const stateData = location.state || {};
+          const newConv = {
+            conversationId: convId,
+          listingId: stateData.listingId || null,
+          listingTitle: stateData.listingTitle || `Ticket #${convId}`,
+          otherUserId: stateData.otherUserId || null,
+          otherUserName: stateData.otherUserName || "Seller",
+          lastMessage: "Chat started",
+          lastMessageTime: "Just now",
+          };
+          setConversations(prev => [newConv, ...prev.filter(c => c.conversationId !== convId)]);
+        setSelectedConversation(newConv);
+        }
         setMobileShowChat(true);
-      }
-    } else if (newListingIdFromUrl && newSellerIdFromUrl) {
-      // Dynamic creation of a new mock conversation
-      const existingConv = conversations.find(
-        c => c.listingId === parseInt(newListingIdFromUrl) && c.otherUserId === parseInt(newSellerIdFromUrl)
-      );
-      
-      if (existingConv) {
-         setSelectedConversation(existingConv);
-         setMobileShowChat(true);
-      } else {
-         const newConv = {
-            conversationId: Date.now(), // Generate a mock ID
-            listingId: parseInt(newListingIdFromUrl),
-            listingTitle: "Ticket #" + newListingIdFromUrl,
-            otherUserId: parseInt(newSellerIdFromUrl),
-            otherUserName: "User #" + newSellerIdFromUrl,
-            lastMessage: "Conversation started",
-            lastMessageTime: "Just now",
-         };
-         setConversations(prev => [newConv, ...prev]);
-         setSelectedConversation(newConv);
-         setMobileShowChat(true);
-      }
     }
-  }, [conversationIdFromUrl, newListingIdFromUrl, newSellerIdFromUrl]); // depend on initial load params
+  }, [conversationIdFromUrl, location.state]);
 
   useEffect(() => {
-    if (!selectedConversation) {
+    if (!selectedConversation?.conversationId) {
       disconnectMarketplaceWebSocket();
       setConnectionStatus("disconnected");
       return;
     }
+    // 1. Fetch persistent history from chat-service database
+    getListingChatHistory(selectedConversation.conversationId)
+      .then((res) => {
+        const history = res.data?.messages || [];
+        setMessages(history);
+      })
+      .catch((err) => {
+        console.error("Failed to load message history:", err);
+      });
 
-    const savedMessages = localStorage.getItem(`marketplace_messages_${selectedConversation.conversationId}`);
-    if (savedMessages) {
-      try {
-        setMessages(JSON.parse(savedMessages));
-      } catch(e) {
-        setMessages([]);
-      }
-    } else {
-      setMessages([]);
-    }
 
-    connectMarketplaceWebSocket(
+      // 2. Connect WebSocket and subscribe to conversation topic
+    connectMarketplaceWebsocket(
       selectedConversation.conversationId,
       (receivedMessage) => {
-        setMessages((prev) => [...prev, receivedMessage]);
+        setMessages((prev) => {
+          if (prev.some((m) => m.id === receivedMessage.id)) return prev;
+          return [...prev, receivedMessage];
+        });
+        
+   setConversations((prev)=> 
+       prev.map((c)=>
+      c.conversationId === selectedConversation.conversationId?
+   {...c, lastMessage: receivedMessage.content, lastMessageTime: "Just now" }
+  : c)
+);
       },
       (status) => {
         setConnectionStatus(status);
@@ -381,11 +381,7 @@ export default function MarketplaceChatsPage() {
     };
   }, [selectedConversation?.conversationId]);
 
-  useEffect(() => {
-    if (selectedConversation) {
-      localStorage.setItem(`marketplace_messages_${selectedConversation.conversationId}`, JSON.stringify(messages));
-    }
-  }, [messages, selectedConversation]);
+ 
 
   const handleSelectConversation = (conv) => {
     setSelectedConversation(conv);
@@ -393,27 +389,8 @@ export default function MarketplaceChatsPage() {
   };
 
   const handleSendMessage = (content) => {
-    const success = sendMarketplaceMessage(selectedConversation.conversationId, currentUserId, content);
-    
-    // In a mock environment without backend echoing back, add manually
-    if (success && connectionStatus !== "connected") {
-       // if disconnected, we still want to show in UI for mock if real sending failed? 
-       // Actually no, wait for echo or simulate echo
-    }
-    // Simulate echo if websocket isn't actually echoing because no backend
-    const simulatedMsg = {
-        senderId: currentUserId,
-        content: content,
-        sendAt: new Date().toISOString()
-    };
-    setMessages((prev) => [...prev, simulatedMsg]);
-
-    // Update conversation last message in list
-    setConversations(prev => prev.map(c => 
-      c.conversationId === selectedConversation.conversationId 
-        ? { ...c, lastMessage: content, lastMessageTime: "Just now" } 
-        : c
-    ));
+    if(!content.trim() || !selectedConversation) return;
+    sendMarketplaceMessage(selectedConversation.conversationId, content);
   };
 
   const handleMobileBack = () => {
