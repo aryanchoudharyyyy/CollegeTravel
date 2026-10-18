@@ -1,5 +1,6 @@
 package com.CollegeTravel.chat_service.controller;
 
+import com.CollegeTravel.chat_service.dto.Response.ListingConversationResponse;
 import com.CollegeTravel.chat_service.dto.Response.ListingMessageResponse;
 import com.CollegeTravel.chat_service.dto.Response.MessageHistoryPage;
 import com.CollegeTravel.chat_service.enitiy.ListingConversation;
@@ -95,4 +96,10 @@ public class ListingConversationController {
                 hasMore
         );
     }
+    @GetMapping("/mine")
+    public List<ListingConversationResponse> getMyConversation(HttpServletRequest request){
+        Long userId = (Long) request.getAttribute("userId");
+        return conversationService.getUserConversation(userId);
+    }
+
 }

@@ -18,6 +18,8 @@ public class ListingConversation {
     private Long listingId;
     @Column(name = "buyer_id", nullable = false)
     private Long buyerId;
+    @Column(name="seller_id", nullable = false)
+    private Long sellerId;
     private LocalDateTime startedAt;
     @PrePersist protected void onCreate() { startedAt = LocalDateTime.now(); }
 }

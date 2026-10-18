@@ -1,6 +1,7 @@
 package com.CollegeTravel.chat_service.serviceImpl;
 
 import com.CollegeTravel.chat_service.client.MarketplaceLookupClient;
+import com.CollegeTravel.chat_service.dto.Response.ListingConversationResponse;
 import com.CollegeTravel.chat_service.enitiy.ListingConversation;
 import com.CollegeTravel.chat_service.enitiy.ListingMessage;
 import com.CollegeTravel.chat_service.exception.CannotMessageOwnListingException;
@@ -13,7 +14,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -37,6 +40,7 @@ public class ListingConversationServiceImpl implements ListingConversationServic
         ListingConversation c = new ListingConversation();
         c.setListingId(listingId);
         c.setBuyerId(requestingUserId);
+        c.setSellerId(ownerId);
         
         try {
             return conversationRepository.save(c);
@@ -60,6 +64,26 @@ public class ListingConversationServiceImpl implements ListingConversationServic
     public List<ListingMessage> getMessages(Long conversationId, Long userId) {
         verifyAccess(conversationId,userId);
         return messageRepository.findByConversationIdOrderBySentAtAsc(conversationId);
+    }
+
+    @Override
+    public List<ListingConversationResponse> getUserConversation(Long userId) {
+        List<ListingConversation> list = conversationRepository.findByBuyerIdOrSellerIdOrderByStartedAtDesc(userId, userId);
+        return list.stream().map(c -> {
+            Long otherUserId = c.getBuyerId().equals(userId) ? c.getSellerId() : c.getBuyerId();
+            Optional<ListingMessage> lastMsg = messageRepository.findTopByConversationIdOrderBySentAtDesc(c.getId());
+           String lastText = lastMsg.map(ListingMessage::getContent).orElse("Chat started");
+            LocalDateTime lastTime = lastMsg.map(ListingMessage::getSentAt).orElse(c.getStartedAt());
+            return new ListingConversationResponse(
+                    c.getId(),
+                    c.getListingId(),
+                    otherUserId,
+                    otherUserId != null ? "User #" + otherUserId : "User",
+                    lastText,
+                    lastTime
+            );
+        }).toList();
+
     }
 }
 

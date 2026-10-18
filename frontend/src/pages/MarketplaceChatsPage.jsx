@@ -6,7 +6,7 @@ import { connectMarketplaceWebsocket,
   sendMarketplaceMessage,
   disconnectMarketplaceWebSocket
  } from "../services/marketPlaceWebsocket";
- import { getListingChatHistory } from "../api/marketplaceApi";
+ import { getListingChatHistory, getMyListingConversations, getListingById } from "../api/marketplaceApi";
 import {
   ArrowLeft,
   Send,
@@ -20,27 +20,20 @@ import {
 } from "lucide-react";
 import "../styles/ChatsPage.css"; // Reusing the same CSS to maintain identical theme
 
-// MOCK DATA
-const MOCK_CONVERSATIONS = [
-  {
-    conversationId: 2001,
-    listingId: 1,
-    listingTitle: "Vande Bharat Express",
-    otherUserId: 101,
-    otherUserName: "User #101",
-    lastMessage: "Is the ticket still available?",
-    lastMessageTime: "1h ago",
-  },
-  {
-    conversationId: 2002,
-    listingId: 2,
-    listingTitle: "Shatabdi CC to Kanpur",
-    otherUserId: 205,
-    otherUserName: "User #205",
-    lastMessage: "Yes, we can meet at the station.",
-    lastMessageTime: "4h ago",
+function formatConvTime(timeStr) {
+  if(!timeStr) return "";
+  try {
+    const d = new Date(timeStr);
+    const diffMs = Date.now() - d.getTime();
+    const diffHours = Math.floor(diffMs / (1000 * 60 *60));
+     if (diffHours < 1) return "Just now";
+    if (diffHours < 24) return `${diffHours}h ago`;
+    return d.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+  } catch  {
+   return timeStr; 
   }
-];
+
+}
 
 
 
@@ -69,7 +62,7 @@ function ConversationList({ conversations, selectedConversationId, onSelectConve
               <p className="chat-group-preview">{conv.lastMessage}</p>
             </div>
             <div className="chat-group-meta">
-              <span className="chat-group-time">{conv.lastMessageTime}</span>
+              <span className="chat-group-time">{formatConvTime(conv.lastMessageTime)}</span>
               <span className="chat-group-members">
                  {/* Reusing existing styles */}
                  Ticket #{conv.listingId}
@@ -90,11 +83,11 @@ function ConversationList({ conversations, selectedConversationId, onSelectConve
   );
 }
 
-function MessageBubble({ msg, isGrouped, isOwn, userName }) {
-  const displayName = isOwn ? `${userName} (you)` : `User #${msg.senderId}`;
+function MessageBubble({ msg, isGrouped, isOwn, userName, otherUserName }) {
+  const displayName = isOwn ? `${userName} (you)` : (otherUserName || `User #${msg.senderId}`);
   const initials = isOwn
     ? userName.slice(0, 2).toUpperCase()
-    : `U${msg.senderId}`;
+    : (otherUserName || "User").slice(0, 2).toUpperCase();
 
   const timeString = (msg.sentAt || msg.sendAt)
     ? new Date(msg.sentAt || msg.sendAt).toLocaleTimeString([], {
@@ -204,8 +197,12 @@ function ChatArea({ conversation, messages, connectionStatus, onSendMessage, use
               />
               <span>{connected ? "Connected" : "Connecting..."}</span>
             </div>
-            <span>|</span>
-            <span>{conversation.listingTitle}</span>
+                        {conversation.listingTitle && (
+              <>
+                <span>|</span>
+                <span>{conversation.listingTitle}</span>
+              </>
+            )}
           </div>
         </div>
         <div className="chat-area-header-actions">
@@ -219,15 +216,17 @@ function ChatArea({ conversation, messages, connectionStatus, onSendMessage, use
       </div>
 
       <div className="chat-messages-area" ref={chatContainerRef}>
-        <div className="chat-intro-block">
-          <h3 className="chat-intro-block-title">{conversation.listingTitle}</h3>
+               <div className="chat-intro-block">
+          <h3 className="chat-intro-block-title">
+            {conversation.listingTitle || `Ticket #${conversation.listingId}`}
+          </h3>
           <p className="chat-intro-block-desc">
             This is the start of your conversation with {conversation.otherUserName} regarding this listing.
           </p>
           <div className="chat-intro-block-details">
             <span>
               <Store size={14} />
-              Ticket #{conversation.listingId}
+              Ticket #{conversation.listingId} {conversation.price ? `• ₹${conversation.price}` : ""}
             </span>
           </div>
         </div>
@@ -244,6 +243,7 @@ function ChatArea({ conversation, messages, connectionStatus, onSendMessage, use
               isGrouped={isGrouped}
               isOwn={isOwn}
               userName={userName}
+              otherUserName={conversation.otherUserName}
             />
           );
         })}
@@ -288,31 +288,61 @@ export default function MarketplaceChatsPage() {
   const [messages, setMessages] = useState([]);
   const [connectionStatus, setConnectionStatus] = useState("disconnected");
   const [mobileShowChat, setMobileShowChat] = useState(false);
-
+  const [conversations, setConversations] = useState([]);
+  const [loadingConversations, setLoadingConversations] = useState(true);
   // In this mock setup, current user ID is 102 (from ListingDetail.jsx mockup)
-  const currentUserId = user?.id || 102; 
+  const currentUserId = user?.id; 
   const userName = user?.name || "You";
 
   const conversationIdFromUrl = searchParams.get("conversation");
   const newListingIdFromUrl = searchParams.get("new_listing");
   const newSellerIdFromUrl = searchParams.get("seller");
 
- 
-  const [conversations, setConversations] = useState(() => {
-    const saved = localStorage.getItem("marketplace_conversations");
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        return [];
-      }
-    }
-    return [];
-  });
+  const loadConversations = () => {
+  setLoadingConversations(true);
+  getMyListingConversations()
+  .then(async (res) => {
+    const rawList = res.data || [];
+    // Live ticket details (route, seller name, price) fetch karke combine karte hain
+    const enrichedList = await Promise.all(
+      rawList.map(async (conv) => {
+        if (!conv.listingId) return conv;
+        try {
+          const listingRes = await getListingById(conv.listingId);
+          const listing = listingRes.data;
+          const route = listing.source && listing.destination 
+            ? `${listing.source} → ${listing.destination}` 
+            : listing.description;
+          const isOtherSeller = conv.otherUserId === listing.postedByUserId;
+          const realName = (isOtherSeller && listing.postedByUserName) 
+            ? listing.postedByUserName 
+            : conv.otherUserName;
+
+          return {
+            ...conv,
+            listingTitle: route || `Ticket #${conv.listingId}`,
+            otherUserName: realName && !realName.startsWith("User #") ? realName : conv.otherUserName,
+            price: listing.price,
+            ticketClass: listing.ticketClass,
+          };
+        } catch {
+          return conv;
+        }
+      })
+    );
+    setConversations(enrichedList);
+  })
+  .catch((err) => {
+    console.log("Failed to load marketplace conversations:", err);
+  })
+  .finally(() => setLoadingConversations(false));
+ };
+  
 
   useEffect(() => {
-    localStorage.setItem("marketplace_conversations", JSON.stringify(conversations));
-  }, [conversations]);
+    localStorage.removeItem("marketplace_conversations");
+    loadConversations();
+  }, []);
 
   useEffect(() => {
     const convId = conversationIdFromUrl ? parseInt(conversationIdFromUrl) : null;
@@ -329,14 +359,14 @@ export default function MarketplaceChatsPage() {
           otherUserId: stateData.otherUserId || null,
           otherUserName: stateData.otherUserName || "Seller",
           lastMessage: "Chat started",
-          lastMessageTime: "Just now",
+          lastMessageTime: new Date().toISOString(),
           };
-          setConversations(prev => [newConv, ...prev.filter(c => c.conversationId !== convId)]);
+          
         setSelectedConversation(newConv);
         }
         setMobileShowChat(true);
     }
-  }, [conversationIdFromUrl, location.state]);
+  }, [conversationIdFromUrl, conversations, location.state]);
 
   useEffect(() => {
     if (!selectedConversation?.conversationId) {

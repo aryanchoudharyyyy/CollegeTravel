@@ -135,7 +135,18 @@ public class MarketplaceServiceImpl implements MarketplaceService {
                 .orElseThrow(()->new ListingNotFoundException("Listing not found:" + listingId));
         List<InterestCountProjection> counts = interestRepository.countInterestsByListingIds(List.of(listingId));
         int count = counts.isEmpty() ? 0 : counts.get(0).getCount();
-        return toResponse(listing, Map.of(listing.getId(), count));
+        String sellerName = null;
+        try {
+            List<UserSummaryDTO> users = userLookupClient.getUserByIds(List.of(listing.getPostedByUserId()));
+            if (users!=null && !users.isEmpty()){
+                sellerName = users.get(0).name();
+            }
+        }
+        catch (Exception ignored){}
+
+
+
+        return toResponse(listing, Map.of(listing.getId(), count), sellerName);
     }
 
     private TicketListing getOwnedListing(Long listingId, Long userId){
@@ -148,10 +159,10 @@ public class MarketplaceServiceImpl implements MarketplaceService {
         }
         return listing;
     }
-    private ListingResponse toResponse(TicketListing l,Map<Long, Integer> countsMap){
+    private ListingResponse toResponse(TicketListing l, Map<Long, Integer> countsMap, String sellerName){
 
         int interestedCount = countsMap.getOrDefault(l.getId(),0);
-        return  new ListingResponse(l.getId(), l.getPostedByUserId(),l.getListingType(), l.getStatus(),
+        return  new ListingResponse(l.getId(), l.getPostedByUserId(), sellerName,l.getListingType(), l.getStatus(),
                 l.getTicketClass(),l.getSource(),l.getDestination(),l.getTravelDate(),l.getPrice(),
         l.getQuantity(),l.getDescription(),l.isActive(),l.getPostedAt(), interestedCount);
     }
@@ -172,7 +183,7 @@ public class MarketplaceServiceImpl implements MarketplaceService {
                         InterestCountProjection::getCount
                 )
         );
-        return page.map(listing ->toResponse(listing, countMap));
+        return page.map(listing ->toResponse(listing, countMap, null));
 
 
     }

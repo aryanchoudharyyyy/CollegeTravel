@@ -30,6 +30,19 @@ function formatTimeAgo(dateString) {
     const diffDays = Math.floor(diffHours / 24);
     return `${diffDays}d ago`;
 }
+function formatDate(dateString) {
+  if (!dateString) return "";
+  try {
+    const d = new Date(dateString);
+    return d.toLocaleDateString("en-IN", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    });
+  } catch {
+    return dateString;
+  }
+}
 
 function ListingDetail() {
   const {id} = useParams();
@@ -74,13 +87,17 @@ function ListingDetail() {
       setActionLoading(true);
       const res = await startListingConversation(id);
       const conversationId = res.data.id;
+            const routeTitle = listing.source && listing.destination 
+        ? `${listing.source} → ${listing.destination}` 
+        : listing.description;
+
       navigate(`/marketplace/chats?conversation=${conversationId}`, {
         state: {
           conversationId: conversationId,
           listingId: listing.id,
-          listingTitle: listing.description,
+          listingTitle: routeTitle,
           otherUserId: listing.postedByUserId,
-          otherUserName: `User #${listing.postedByUserId}`,
+          otherUserName: listing.postedByUserName || `User #${listing.postedByUserId}`,
         }
       });
     } catch (err) {
@@ -189,13 +206,13 @@ function ListingDetail() {
 
           {/* ── Meta Info Grid ── */}
           <div className="ld-meta-grid animate-in" style={{ animationDelay: "0.2s" }}>
-            <div className="ld-meta-card">
+                        <div className="ld-meta-card">
               <div className="ld-meta-icon-wrap">
                 <Calendar size={20} />
               </div>
               <div>
                 <p className="ld-meta-label">Travel Date</p>
-                <p className="ld-meta-value">{listing.travelDate}</p>
+                <p className="ld-meta-value">{formatDate(listing.travelDate)}</p>
               </div>
             </div>
             <div className="ld-meta-card">
@@ -204,7 +221,7 @@ function ListingDetail() {
               </div>
               <div>
                 <p className="ld-meta-label">Posted</p>
-                <p className="ld-meta-value">{listing.postedAt}</p>
+                <p className="ld-meta-value">{formatTimeAgo(listing.postedAt)}</p>
               </div>
             </div>
             <div className="ld-meta-card">
@@ -237,8 +254,8 @@ function ListingDetail() {
                 <User size={20} />
               </div>
               <div className="ld-seller-info">
-                <p className="ld-seller-name">User #{listing.postedByUserId}</p>
-                <p className="ld-seller-time">Posted {listing.postedAt}</p>
+                <p className="ld-seller-name">{listing.postedByUserName || `User #${listing.postedByUserId}`}</p>
+<p className="ld-seller-time">Posted {formatTimeAgo(listing.postedAt)}</p>
               </div>
             </div>
           </div>
