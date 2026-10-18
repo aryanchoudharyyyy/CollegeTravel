@@ -61,13 +61,6 @@ function ConversationList({ conversations, selectedConversationId, onSelectConve
               <h3 className="chat-group-route">{conv.otherUserName}</h3>
               <p className="chat-group-preview">{conv.lastMessage}</p>
             </div>
-            <div className="chat-group-meta">
-              <span className="chat-group-time">{formatConvTime(conv.lastMessageTime)}</span>
-              <span className="chat-group-members">
-                 {/* Reusing existing styles */}
-                 Ticket #{conv.listingId}
-              </span>
-            </div>
           </div>
         ))}
 
@@ -394,12 +387,13 @@ export default function MarketplaceChatsPage() {
           return [...prev, receivedMessage];
         });
         
-   setConversations((prev)=> 
-       prev.map((c)=>
-      c.conversationId === selectedConversation.conversationId?
-   {...c, lastMessage: receivedMessage.content, lastMessageTime: "Just now" }
-  : c)
-);
+   setConversations((prev) => 
+     prev.map((c) =>
+       c.conversationId === selectedConversation.conversationId
+         ? { ...c, lastMessage: receivedMessage.content, lastMessageTime: new Date().toISOString() }
+         : c
+     )
+   );
       },
       (status) => {
         setConnectionStatus(status);
