@@ -52,10 +52,15 @@ public class ListingConversationController {
                 ? null
                 : cursorCodec.decode(before);
 
-        List<ListingMessage> fetchedMessages = messageRepository.findHistoryBefore(
+        List<ListingMessage> fetchedMessages = (cursor == null)
+                ? messageRepository.findLatestHistory(
                 conversationId,
-                cursor != null ? cursor.timestamp() : null,
-                cursor != null ? cursor.id() : null,
+                PageRequest.of(0, safeLimit + 1)
+        )
+                : messageRepository.findHistoryBefore(
+                conversationId,
+                cursor.timestamp(),
+                cursor.id(),
                 PageRequest.of(0, safeLimit + 1)
         );
 

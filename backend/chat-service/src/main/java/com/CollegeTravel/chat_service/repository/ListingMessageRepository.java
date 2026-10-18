@@ -1,24 +1,34 @@
 package com.CollegeTravel.chat_service.repository;
 
 import com.CollegeTravel.chat_service.enitiy.ListingMessage;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-import org.springframework.data.domain.Pageable;
 
-import javax.swing.text.html.Option;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
 public interface ListingMessageRepository extends JpaRepository<ListingMessage, Long> {
+
+    @Query("""
+    SELECT m
+    FROM ListingMessage m
+    WHERE m.conversationId = :conversationId
+    ORDER BY m.sentAt DESC, m.id DESC
+    """)
+    List<ListingMessage> findLatestHistory(
+            @Param("conversationId") Long conversationId,
+            Pageable pageable
+    );
+
     @Query("""
     SELECT m
     FROM ListingMessage m
     WHERE m.conversationId = :conversationId
       AND (
-            :cursorTime IS NULL
-            OR m.sentAt < :cursorTime
+            m.sentAt < :cursorTime
             OR (m.sentAt = :cursorTime AND m.id < :cursorId)
       )
     ORDER BY m.sentAt DESC, m.id DESC
@@ -29,8 +39,8 @@ public interface ListingMessageRepository extends JpaRepository<ListingMessage, 
             @Param("cursorId") Long cursorId,
             Pageable pageable
     );
-    List<ListingMessage> findByConversationIdOrderBySentAtAsc(Long conversationId);
 
+    List<ListingMessage> findByConversationIdOrderBySentAtAsc(Long conversationId);
 
     Optional<ListingMessage> findTopByConversationIdOrderBySentAtDesc(Long conversationId);
 }
