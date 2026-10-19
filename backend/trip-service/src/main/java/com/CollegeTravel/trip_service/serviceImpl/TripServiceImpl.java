@@ -119,6 +119,17 @@ public class TripServiceImpl implements TripService {
         return tripRepository.findByUserId(userId);
     }
 
+    @Override
+    @Transactional
+    public void deleteTrip(Long tripId, Long userId) {
+        Trip trip = tripRepository.findById(tripId)
+                .orElseThrow(() -> new TripNotFoundException("Trip not found with ID: " + tripId));
+        if (!trip.getUserId().equals(userId)) {
+            throw new TripAccessDeniedException("You can only delete your own trips");
+        }
+        tripRepository.delete(trip);
+    }
+
 
     private List<MatchedTripResponse> computeMatches(Trip trip){
         LocalDateTime windowStart = trip.getTravelDateTime().minusHours(WINDOW_HOURS);

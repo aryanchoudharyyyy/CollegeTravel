@@ -11,6 +11,7 @@ import jakarta.validation.Valid;
 import jakarta.ws.rs.Path;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -50,5 +51,11 @@ public class TripController {
         return tripService.getMyTrips(userId);
     }
 
+    @DeleteMapping("/{tripId}")
+    public ResponseEntity<String> deleteTrip(@PathVariable Long tripId, HttpServletRequest request) {
+        Long userId = (Long) request.getAttribute("userId");
+        tripService.deleteTrip(tripId, userId);
+        return ResponseEntity.ok("Trip deleted successfully");
+    }
 
 }

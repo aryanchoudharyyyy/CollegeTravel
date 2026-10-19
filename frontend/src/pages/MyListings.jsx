@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { getMyTrips } from "../api/tripApi";
+import { getMyTrips, deleteTrip } from "../api/tripApi";
 import { useNavigate } from "react-router-dom";
 import { TrainFront, BusFront, Clock, MoveRight, Flame, Trash2, Edit } from "lucide-react";
 import "../styles/MyListings.css";
@@ -67,6 +67,17 @@ useEffect(()=>{
         } catch (err) {
             console.error("Failed to delete ticket listing:", err);
             alert(err.response?.data?.message || "Failed to delete ticket listing");
+        }
+    };
+
+    const handleDeleteTrip = async (tripId) => {
+        if (!window.confirm("Are you sure you want to cancel and remove this trip?")) return;
+        try {
+            await deleteTrip(tripId);
+            setMyTrips((prev) => prev.filter((item) => item.id !== tripId));
+        } catch (err) {
+            console.error("Failed to delete trip:", err);
+            alert(err.response?.data?.message || "Failed to delete trip");
         }
     };
 
@@ -162,7 +173,7 @@ useEffect(()=>{
                             </div>
                         ) : (
                             myTrips.map(tripItem => (
-                                <TripCard key={tripItem.id} trip={tripItem} />
+                                <TripCard key={tripItem.id} trip={tripItem} onDelete={handleDeleteTrip} />
                             ))
                         )}
                     </div>

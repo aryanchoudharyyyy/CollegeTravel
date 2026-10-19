@@ -1,12 +1,10 @@
-import { Route, Clock, MoveRight, Edit, Trash2 } from "lucide-react";
+import { Route, Clock, MoveRight, Trash2 } from "lucide-react";
 import "../styles/TripCard.css"; 
 import { useNavigate } from "react-router-dom";
 
-
-function TripCard({ trip }) {
+function TripCard({ trip, onDelete }) {
   const navigate = useNavigate();
   if (!trip) return null;
-
 
   const dateObj = trip.travelDate ? new Date(trip.travelDate) : new Date(trip.travelDateTime);
   const formattedDate = dateObj.toLocaleDateString("en-GB", {
@@ -54,25 +52,32 @@ function TripCard({ trip }) {
       </div>
 
       <div className="tc-footer">
-          <button 
-    style={{
-      background: "var(--primary-color, #2563eb)",
-      color: "white",
-      border: "none",
-      borderRadius: "6px",
-      padding: "6px 12px",
-      fontSize: "12px",
-      cursor: "pointer",
-      fontWeight: "500"
-    }}
-    onClick={() => navigate("/trip-matches", { state: { myTrip: trip } })}
-  >
-    Check Matches
-  </button>
-  
+        <button 
+          style={{
+            background: "var(--primary-color, #2563eb)",
+            color: "white",
+            border: "none",
+            borderRadius: "6px",
+            padding: "6px 12px",
+            fontSize: "12px",
+            cursor: "pointer",
+            fontWeight: "500"
+          }}
+          onClick={() => navigate("/trip-matches", { state: { myTrip: trip } })}
+        >
+          Check Matches
+        </button>
+        
         <div className="tc-action-column">
-          <button className="tc-icon-btn"><Edit size={14} /></button>
-          <button className="tc-icon-btn"><Trash2 size={14} /></button>
+          {onDelete && (
+            <button 
+              className="tc-icon-btn" 
+              title="Delete Trip"
+              onClick={() => onDelete(trip.id)}
+            >
+              <Trash2 size={14} />
+            </button>
+          )}
         </div>
       </div>
     </div>

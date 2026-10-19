@@ -14,4 +14,5 @@ public interface TripService {
     boolean userHasMatchingTrip(Long userId, String sourcePoint, String boardingStation, LocalDate travelDate);
     List<ExploreTripResponse> getExploreTrips(Long userId);
     List<Trip> getMyTrips(Long userId);
+    void deleteTrip(Long tripId, Long userId);
 }

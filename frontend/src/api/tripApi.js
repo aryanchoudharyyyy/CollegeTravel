@@ -12,3 +12,6 @@ export const getExploreTrips= () =>{
 export const getMyTrips = () =>{
     return apiClient.get("/api/trips/my-trips");
 };
+export const deleteTrip = (tripId) => {
+    return apiClient.delete(`/api/trips/${tripId}`);
+};
