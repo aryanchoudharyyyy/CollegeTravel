@@ -41,13 +41,9 @@ public class ChatController {
         Long senderId =(Long) headerAccessor.getSessionAttributes().get("userId");
         String token = (String) headerAccessor.getSessionAttributes().get("jwtToken");
 
-        // ---- DEV CHAT BYPASS START ----
-        if (request.groupId() != 9999L) {
-            if (!membershipVerifier.isMember(request.groupId(),senderId,token)){
-                throw new NotGroupMemberException("You are not a member of this group");
-            }
+        if (!membershipVerifier.isMember(request.groupId(), senderId, token)) {
+            throw new NotGroupMemberException("You are not a member of this group");
         }
-        // ---- DEV CHAT BYPASS END ----
         ChatMessage message = new ChatMessage();
         message.setGroupId(request.groupId());
         message.setSenderId(senderId);

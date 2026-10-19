@@ -31,13 +31,8 @@ public class WebSocketSubscriptionInterceptor implements ChannelInterceptor {
             } else if (destination.startsWith("/topic/group.")) {
                 Long groupId = Long.parseLong(destination.substring("/topic/group.".length()));
                 String token = (String) accessor.getSessionAttributes().get("jwtToken");
-                // ---- DEV CHAT BYPASS START ----
-                if (groupId == 9999L) {
-                    return message;
-                }
-                // ---- DEV CHAT BYPASS END ----
-                if (!membershipVerifier.isMember(groupId, userId, token)){
-                throw new IllegalArgumentException("Not authorized tp subscribe this group");
+                if (!membershipVerifier.isMember(groupId, userId, token)) {
+                    throw new IllegalArgumentException("Not authorized to subscribe to this group");
                 }
 
             } else if (destination.startsWith("/topic/listing-conversation.")) {

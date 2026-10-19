@@ -17,6 +17,8 @@ import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
+import java.util.Map;
 
 @Component
 @RequiredArgsConstructor
@@ -34,30 +36,24 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
         if(accessor!=null && StompCommand.CONNECT.equals(accessor.getCommand())){
             String authHeader = accessor.getFirstNativeHeader("Authorization");
             
-            // ---- DEV CHAT BYPASS START ----
-            String devUser = accessor.getFirstNativeHeader("userId");
-            if(authHeader != null && authHeader.equals("Bearer dummy-jwt-token") && devUser != null) {
-                Long devUserId = Long.parseLong(devUser);
-                accessor.setUser(() -> String.valueOf(devUserId));
-                accessor.getSessionAttributes().put("userId", devUserId);
-                accessor.getSessionAttributes().put("jwtToken", authHeader);
-            } else {
-            // ---- DEV CHAT BYPASS END ----
-            
-                if(authHeader==null ||!authHeader.startsWith("Bearer ")){
-                    throw new IllegalArgumentException("Missing or invalid Authorization header");
+            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+                throw new IllegalArgumentException("Missing or invalid Authorization header");
+            }
+            try {
+                SecretKey key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
+                Claims claims = Jwts.parser().verifyWith(key).build()
+                        .parseSignedClaims(authHeader.substring(7)).getPayload();
+                Number userIdRaw = claims.get("userId", Number.class);
+                accessor.setUser(() -> String.valueOf(userIdRaw));
+                Map<String, Object> sessionAttrs = accessor.getSessionAttributes();
+                if (sessionAttrs == null) {
+                    sessionAttrs = new java.util.HashMap<>();
+                    accessor.setSessionAttributes(sessionAttrs);
                 }
-                try {
-                    SecretKey key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
-                    Claims claims = Jwts.parser().verifyWith(key).build()
-                            .parseSignedClaims(authHeader.substring(7)).getPayload();
-                    Number userIdRaw = claims.get("userId", Number.class);
-                    accessor.setUser(()-> String.valueOf(userIdRaw));
-                    accessor.getSessionAttributes().put("userId", userIdRaw!= null?userIdRaw.longValue() : null);
-                    accessor.getSessionAttributes().put("jwtToken", authHeader);
-                } catch (Exception e) {
-                    throw new IllegalArgumentException("Invalid or expired token");
-                }
+                sessionAttrs.put("userId", userIdRaw != null ? userIdRaw.longValue() : null);
+                sessionAttrs.put("jwtToken", authHeader);
+            } catch (Exception e) {
+                throw new IllegalArgumentException("Invalid or expired token");
             }
         }
         /*
@@ -88,11 +84,6 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
                         )
                 );
 
-                // ---- DEV CHAT BYPASS START ----
-                if (groupId == 9999L) {
-                    return message; // Skip membership check for dev group
-                }
-                // ---- DEV CHAT BYPASS END ----
 
                 boolean isMember =
                         groupServiceClient.isMember(
