@@ -159,7 +159,7 @@ export default function TripDetailsPage() {
         sourcePoint: source,
         boardingStation: station,
         travelDate: date,
-        initialMemeberId: trip.rawTrip?.userId,
+        initialMemberId: trip.rawTrip?.userId,
       });
       if(createRes.data?.id){
         navigate(`/chats?groupId=${createRes.data.id}`);
