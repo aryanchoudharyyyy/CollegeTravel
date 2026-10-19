@@ -1,4 +1,4 @@
-import { TrainFront, BusFront, Clock, MoveRight, Flame, Edit, Trash2 } from "lucide-react";
+import { Route, Clock, MoveRight, Edit, Trash2 } from "lucide-react";
 import "../styles/TripCard.css"; 
 import { useNavigate } from "react-router-dom";
 
@@ -7,7 +7,7 @@ function TripCard({ trip }) {
   const navigate = useNavigate();
   if (!trip) return null;
 
-  const isTrain = trip.mode === "TRAIN";
+
   const dateObj = trip.travelDate ? new Date(trip.travelDate) : new Date(trip.travelDateTime);
   const formattedDate = dateObj.toLocaleDateString("en-GB", {
     day: "2-digit",
@@ -22,13 +22,13 @@ function TripCard({ trip }) {
 
   const title = trip.vehicleNumber
     ? `Vehicle: ${trip.vehicleNumber}`
-    : trip.finalDestination || trip.destination || `${isTrain ? "Train" : "Bus"} Trip`;
+    : trip.destination || trip.finalDestination || trip.boardingStation || "Trip";
 
   return (
     <div className="tc-card">
       <div className="tc-header">
-        <div className={`tc-icon-box ${isTrain ? 'tc-bg-train' : 'tc-bg-bus'}`}>
-          {isTrain ? <TrainFront size={20} /> : <BusFront size={20} />}
+        <div className="tc-icon-box">
+          <Route size={20} />
         </div>
         
         <div className="tc-title">
@@ -39,9 +39,11 @@ function TripCard({ trip }) {
           <Clock size={14} /> {formattedTime}
         </span>
         
-        <div className="tc-price">
-          {trip.mode || (trip.finalDestination ? 'TRIP' : 'BUS')}
-        </div>
+        {trip.mode && (
+          <div className="tc-price">
+            {trip.mode}
+          </div>
+        )}
       </div>
 
       <div className="tc-route-section">
@@ -68,14 +70,6 @@ function TripCard({ trip }) {
     Check Matches
   </button>
   
-  <div className="tc-action-column">
-    <button className="tc-icon-btn"><Edit size={14} /></button>
-    <button className="tc-icon-btn"><Trash2 size={14} /></button>
-  </div>
-        <div className="tc-badge has-interest">
-          <Flame size={14} /> 3 Interested
-        </div>
-        
         <div className="tc-action-column">
           <button className="tc-icon-btn"><Edit size={14} /></button>
           <button className="tc-icon-btn"><Trash2 size={14} /></button>

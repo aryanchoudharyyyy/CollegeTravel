@@ -283,6 +283,7 @@ function ListingDetail() {
               </div>
             ) : (
               <div className="ld-buyer-actions">
+                {/* TODO: Re-enable when interest feature is ready
                 <button 
                   className="ld-btn-primary" 
                   onClick={handleExpressInterest}
@@ -290,6 +291,7 @@ function ListingDetail() {
                 >
                   {interestSuccess ? "Interest Expressed!" : "Express Interest"}
                 </button>
+                */}
                 <button 
                   className="ld-btn-secondary" 
                   onClick={handleChatWithSeller}

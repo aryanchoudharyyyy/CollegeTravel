@@ -81,10 +81,12 @@ useEffect(()=>{
                 onClick={() => setActiveTab('trips')}>
                     My Trips ({myTrips.length})
                 </button>
+                {/* TODO: Re-enable when interest feature is ready
                 <button className={`pr-tab ${activeTab === 'interests' ? 'active' :''}`}
                 onClick={() => setActiveTab('interests')}>
                     My Interests (0)
                 </button>
+                */}
              </div>
              
              <div className="pr-content animate-in" style={{animationDelay: '0.1s'}}>
@@ -125,6 +127,7 @@ useEffect(()=>{
                                           <div className="pr-ticket-date">{formatTravelDate(item.travelDate)}</div>
                                       </div>
                                       <div className="pr-ticket-actions">
+                                          {/* TODO: Re-enable when interest feature is ready
                                           <div 
                                               className={`pr-interest-badge ${item.interestCount > 0 ? 'has-interest' : ''}`}
                                               onClick={() => navigate(`/marketplace/${item.id}`)}
@@ -132,6 +135,7 @@ useEffect(()=>{
                                           >
                                               <Flame size={14} /> {item.interestCount || 0} Interested
                                           </div>
+                                          */}
                                           
                                           <div className="pr-action-btns">
                                               <button 
@@ -164,12 +168,14 @@ useEffect(()=>{
                     </div>
                 )}
                 
+                {/* TODO: Re-enable when interest feature is ready
                 {activeTab === 'interests' && (
                     <div className="pr-empty-state">
                         <p>You haven't expressed interest in any tickets yet.</p>
                         <button className="pr-btn-primary" onClick={() => navigate("/marketplace")}>Browse Marketplace</button>
                     </div>
                 )}
+                */}
             </div>
         </div>
     );

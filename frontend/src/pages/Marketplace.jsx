@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Search, LayoutGrid, TrainFront, BusFront, ArrowDownUp, ChevronDown, MoveRight, Clock, ArrowRight, Calendar } from "lucide-react";
 import "../styles/Marketplace.css";
 import { browseListings } from "../api/marketplaceApi";
+import { useAuth } from "../contexts/AuthContext";
 
 function formatTimeAgo(dateString){
     if(!dateString) return "Recently";
@@ -32,6 +33,8 @@ function Marketplace(){
     const dropdownRef = useRef(null);
     const [listings, setListings] = useState([]);
     const [loading, setLoading] = useState(true);
+    const { user } = useAuth();
+    const currentUserId = user?.id;
 
     // Close dropdown when clicking outside
     useEffect(() => {
@@ -168,6 +171,9 @@ function Marketplace(){
                         .filter((item) => {
                             const searchStr = `${item.source} ${item.destination} ${item.description}`.toLowerCase();
                             const matchesSearch = searchStr.includes(searchQuery.toLowerCase());
+                            if (currentUserId && item.postedByUserId === currentUserId) {
+                                   return false; // Apni khud ki listing hide ho jayegi
+                                }
 
                             const matchesFilter =
                                 activeFilter === "All"
