@@ -144,4 +144,38 @@ class WebSocketSecurityTest {
         verifyNoInteractions(chatMessageRepository);
         verifyNoInteractions(messagingTemplate);
     }
+
+    @Test
+    void whenSubscribeToListingConversation_whenAuthorized_shouldSucceed() {
+        StompHeaderAccessor accessor = StompHeaderAccessor.create(StompCommand.SUBSCRIBE);
+        accessor.setDestination("/topic/listing-conversation.2");
+        Map<String, Object> sessionAttrs = new HashMap<>();
+        sessionAttrs.put("userId", 42L);
+        sessionAttrs.put("jwtToken", "Bearer some-token");
+        accessor.setSessionAttributes(sessionAttrs);
+        Message<?> message = MessageBuilder.createMessage(new byte[0], accessor.getMessageHeaders());
+
+        doNothing().when(listingConversationService).verifyAccess(2L, 42L);
+
+        Message<?> result = subscriptionInterceptor.preSend(message, null);
+        assertNotNull(result);
+        verify(listingConversationService).verifyAccess(2L, 42L);
+    }
+
+    @Test
+    void whenSubscribeToListingConversation_whenNotParticipant_shouldThrowException() {
+        StompHeaderAccessor accessor = StompHeaderAccessor.create(StompCommand.SUBSCRIBE);
+        accessor.setDestination("/topic/listing-conversation.2");
+        Map<String, Object> sessionAttrs = new HashMap<>();
+        sessionAttrs.put("userId", 99L);
+        sessionAttrs.put("jwtToken", "Bearer some-token");
+        accessor.setSessionAttributes(sessionAttrs);
+        Message<?> message = MessageBuilder.createMessage(new byte[0], accessor.getMessageHeaders());
+
+        doThrow(new IllegalArgumentException("You are not part of this conversation"))
+                .when(listingConversationService).verifyAccess(2L, 99L);
+
+        assertThrows(IllegalArgumentException.class, () ->
+                subscriptionInterceptor.preSend(message, null));
+    }
 }

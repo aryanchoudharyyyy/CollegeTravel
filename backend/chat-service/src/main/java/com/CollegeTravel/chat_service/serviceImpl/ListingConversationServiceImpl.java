@@ -13,12 +13,14 @@ import com.CollegeTravel.chat_service.repository.ListingConversationRepository;
 import com.CollegeTravel.chat_service.repository.ListingMessageRepository;
 import com.CollegeTravel.chat_service.service.ListingConversationService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.*;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ListingConversationServiceImpl implements ListingConversationService {
@@ -54,12 +56,31 @@ public class ListingConversationServiceImpl implements ListingConversationServic
 
     @Override
     public void verifyAccess(Long conversationId, Long userId) {
-    ListingConversation conversation =conversationRepository.findById(conversationId)
-            .orElseThrow(()->new ConversationNotFoundException("Conversation not found: "+conversationId));
-    if (conversation.getBuyerId().equals(userId)) return;
-    Long ownerId = marketplaceLookupClient.getListingOwner(conversation.getListingId());
-    if (ownerId.equals(userId)) return;
-    throw new NotConversationParticipantException("You are not part of this conversation");
+        if (userId == null) {
+            throw new NotConversationParticipantException("User ID is required to verify conversation access");
+        }
+        ListingConversation conversation = conversationRepository.findById(conversationId)
+                .orElseThrow(() -> new ConversationNotFoundException("Conversation not found: " + conversationId));
+
+        if (userId.equals(conversation.getBuyerId())) {
+            return;
+        }
+        if (userId.equals(conversation.getSellerId())) {
+            return;
+        }
+
+        if (conversation.getSellerId() == null && conversation.getListingId() != null) {
+            try {
+                Long ownerId = marketplaceLookupClient.getListingOwner(conversation.getListingId());
+                if (userId.equals(ownerId)) {
+                    return;
+                }
+            } catch (Exception e) {
+                log.warn("Could not verify listing owner via marketplace client for listingId: {}", conversation.getListingId(), e);
+            }
+        }
+
+        throw new NotConversationParticipantException("You are not part of this conversation");
     }
 
     @Override

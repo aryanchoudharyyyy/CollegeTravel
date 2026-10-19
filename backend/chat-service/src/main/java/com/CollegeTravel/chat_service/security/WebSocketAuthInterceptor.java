@@ -56,66 +56,6 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
                 throw new IllegalArgumentException("Invalid or expired token");
             }
         }
-        /*
-         * SUBSCRIBE
-         */
-        if (StompCommand.SUBSCRIBE.equals(accessor.getCommand())) {
-
-            String destination = accessor.getDestination();
-
-            if (destination == null) {
-                return message;
-            }
-
-            Long userId = (Long)
-                    accessor.getSessionAttributes()
-                            .get("userId");
-
-            String token = (String)
-                    accessor.getSessionAttributes()
-                            .get("jwtToken");
-
-            if (destination.startsWith("/topic/group.")) {
-
-                Long groupId = Long.parseLong(
-                        destination.replace(
-                                "/topic/group.",
-                                ""
-                        )
-                );
-
-
-                boolean isMember =
-                        groupServiceClient.isMember(
-                                groupId,
-                                userId,
-                                token
-                        );
-
-                if (!isMember) {
-                    throw new IllegalArgumentException(
-                            "Access denied"
-                    );
-                }
-            }
-
-            if (destination.startsWith(
-                    "/topic/listing-conversation."
-            )) {
-
-                Long conversationId = Long.parseLong(
-                        destination.replace(
-                                "/topic/listing-conversation.",
-                                ""
-                        )
-                );
-
-                listingConversationService.verifyAccess(
-                        conversationId,
-                        userId
-                );
-            }
-        }
-        return  message;
+        return message;
     }
 }

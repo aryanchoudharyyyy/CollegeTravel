@@ -9,6 +9,15 @@ import org.springframework.messaging.simp.config.MessageBrokerRegistry;
 import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
 import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
 import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
+import org.springframework.context.annotation.Bean;
+import org.springframework.messaging.Message;
+import org.springframework.messaging.simp.stomp.StompCommand;
+import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
+import org.springframework.messaging.support.MessageBuilder;
+import org.springframework.web.socket.messaging.StompSubProtocolErrorHandler;
+
+import java.nio.charset.StandardCharsets;
+
 @Configuration
 @EnableWebSocketMessageBroker
 @RequiredArgsConstructor
@@ -25,6 +34,27 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
         registry.addEndpoint("/api/chat/ws")
                 .setAllowedOriginPatterns("*")
                 .withSockJS();
+
+        registry.setErrorHandler(stompErrorHandler());
+    }
+
+    @Bean
+    public StompSubProtocolErrorHandler stompErrorHandler() {
+        return new StompSubProtocolErrorHandler() {
+            @Override
+            public Message<byte[]> handleClientMessageProcessingError(Message<byte[]> clientMessage, Throwable ex) {
+                Throwable cause = ex;
+                while (cause.getCause() != null && cause.getCause() != cause) {
+                    cause = cause.getCause();
+                }
+                String message = cause.getMessage() != null ? cause.getMessage() : "WebSocket processing error";
+
+                StompHeaderAccessor accessor = StompHeaderAccessor.create(StompCommand.ERROR);
+                accessor.setMessage(message);
+                accessor.setLeaveMutable(true);
+                return MessageBuilder.createMessage(message.getBytes(StandardCharsets.UTF_8), accessor.getMessageHeaders());
+            }
+        };
     }
 
 

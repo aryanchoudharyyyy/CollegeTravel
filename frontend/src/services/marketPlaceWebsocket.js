@@ -26,9 +26,16 @@ export const connectMarketplaceWebsocket = (conversationId, onMessage, onStatusC
                 }
             });
         },
-         onStompError: (frame) => {
-            console.error("Marketplace broker error:", frame.headers["message"]);
+        onStompError: (frame) => {
+            const errorMsg = frame.headers["message"];
+            console.error("Marketplace broker error:", errorMsg);
+            if (frame.body) {
+                console.error("Broker error details:", frame.body);
+            }
             if (connectionStatusCallBack) connectionStatusCallBack("disconnected");
+            if (stompClient) {
+                stompClient.deactivate();
+            }
         },
         onWebSocketError: (error) => {
             console.error("Marketplace WebSocket error:", error);
