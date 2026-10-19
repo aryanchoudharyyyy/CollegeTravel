@@ -6,47 +6,27 @@ spring:
     name: api-gateway
   cloud:
     gateway:
-      server:
-        webmvc:
-          routes:
-            - id: trip-service-route
-              uri: lb://TRIP-SERVICE
-              predicates:
-                - Path=/api/trips/**
-            - id: internal-trip-route
-              uri: lb://TRIP-SERVICE
-              predicates:
-                - Path=/api/internal/trips/**
-            - id: user-service-route
-              uri: lb://USER-SERVICE
-              predicates:
-                - Path=/api/users/**
-            - id: internal-user-route
-              uri: lb://USER-SERVICE
-              predicates:
-                - Path=/api/internal/users/**
-
-            - id: group-service-route
-              uri: lb://GROUP-SERVICE
-              predicates:
-                  - Path=/api/groups/**
-            - id: internal-group-route
-              uri: lb://GROUP-SERVICE
-              predicates:
-                - Path=/api/internal/groups/**
-
-            - id: chat-service-route
-              uri: lb://CHAT-SERVICE
-              predicates:
-                - Path=/api/chat/**
-            - id: marketplace-service-route
-              uri: lb://MARKETPLACE-SERVICE
-              predicates:
-                - Path=/api/marketplace/**
-            - id: internal-marketplace-route
-              uri: lb://MARKETPLACE-SERVICE
-              predicates:
-                - Path=/api/internal/marketplace/**
+      routes:
+        - id: trip-service-route
+          uri: lb://TRIP-SERVICE
+          predicates:
+            - Path=/api/trips/**
+        - id: user-service-route
+          uri: lb://USER-SERVICE
+          predicates:
+            - Path=/api/users/**
+        - id: group-service-route
+          uri: lb://GROUP-SERVICE
+          predicates:
+            - Path=/api/groups/**
+        - id: chat-service-route
+          uri: lb://CHAT-SERVICE
+          predicates:
+            - Path=/api/chat/**
+        - id: marketplace-service-route
+          uri: lb://MARKETPLACE-SERVICE
+          predicates:
+            - Path=/api/marketplace/**
 
 
 eureka:

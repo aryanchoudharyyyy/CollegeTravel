@@ -1,6 +1,6 @@
 import { Client } from "@stomp/stompjs";
 import { getAccessToken } from "../utils/token";
-const WS_URL = "ws://localhost:8085/api/chat/ws"; 
+const WS_URL = import.meta.env.VITE_WS_URL || "ws://localhost:8080/api/chat/ws"; 
 let stompClient = null;
 let connectionStatusCallBack = null;
 export const connectMarketplaceWebsocket = (conversationId, onMessage, onStatusChange)=>{
