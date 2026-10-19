@@ -30,7 +30,7 @@ public class OutboxSchedulerImpl implements OutboxScheduler {
                     tripEventPublisher.publishTripCreated(payload);
                 }
                 //delete the event after successful publication
-                //outboxEventRepository.delete(outboxEvent);
+                outboxEventRepository.delete(outboxEvent);
 
             } catch (Exception e) {
                 System.out.println("Failed to process outbox event ID "+
