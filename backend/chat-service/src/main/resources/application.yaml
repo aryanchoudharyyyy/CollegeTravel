@@ -28,7 +28,14 @@ resilience4j:
         failure-rate-threshold: 50
         wait-duration-in-open-state: 10s
         permitted-number-of-calls-in-half-open-state: 3
-
+      user-service:
+        register-health-indicator: true
+        sliding-window-type: COUNT_BASED
+        sliding-window-size: 10
+        minimum-number-of-calls: 5
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10s
+        permitted-number-of-calls-in-half-open-state: 3
   retry:
     instances:
       Group-service:
@@ -37,7 +44,9 @@ resilience4j:
       marketplace-service:
         max-attempts: 3
         wait-duration: 500ms
-
+      user-service:
+        max-attempts: 3
+        wait-duration: 500ms
 feign:
   client:
     config:
@@ -45,6 +54,9 @@ feign:
         connect-timeout: 2000
         read-timeout: 2000
       marketplace-service:
+        connect-timeout: 2000
+        read-timeout: 2000
+      user-service:
         connect-timeout: 2000
         read-timeout: 2000
 management:

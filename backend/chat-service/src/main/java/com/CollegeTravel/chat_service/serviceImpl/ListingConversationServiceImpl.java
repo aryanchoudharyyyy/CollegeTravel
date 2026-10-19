@@ -1,7 +1,9 @@
 package com.CollegeTravel.chat_service.serviceImpl;
 
 import com.CollegeTravel.chat_service.client.MarketplaceLookupClient;
+import com.CollegeTravel.chat_service.client.UserLookupClient;
 import com.CollegeTravel.chat_service.dto.Response.ListingConversationResponse;
+import com.CollegeTravel.chat_service.dto.Response.UserSummaryDTO;
 import com.CollegeTravel.chat_service.enitiy.ListingConversation;
 import com.CollegeTravel.chat_service.enitiy.ListingMessage;
 import com.CollegeTravel.chat_service.exception.CannotMessageOwnListingException;
@@ -15,8 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
@@ -24,6 +25,7 @@ public class ListingConversationServiceImpl implements ListingConversationServic
     private final ListingConversationRepository conversationRepository;
     private final ListingMessageRepository messageRepository;
     private final MarketplaceLookupClient marketplaceLookupClient;
+    private final UserLookupClient userLookupClient;
     @Override
     @Transactional
     public ListingConversation getOrCreateConversation(Long listingId, Long requestingUserId) {
@@ -68,17 +70,43 @@ public class ListingConversationServiceImpl implements ListingConversationServic
 
     @Override
     public List<ListingConversationResponse> getUserConversation(Long userId) {
+
         List<ListingConversation> list = conversationRepository.findByBuyerIdOrSellerIdOrderByStartedAtDesc(userId, userId);
+        if(list.isEmpty()){
+            return List.of();
+        }
+        List<Long>  otherUserIds = list.stream()
+                .map(c -> c.getBuyerId().equals(userId) ? c.getSellerId() : c.getBuyerId())
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+
+        Map<Long, String> nameMap = new HashMap<>();
+        try{
+            List<UserSummaryDTO> summaries = userLookupClient.getUserByIds(otherUserIds);
+            if(summaries!=null){
+                for (UserSummaryDTO user : summaries){
+                    nameMap.put(user.id(), user.name());
+                }
+            }
+        } catch (Exception ignored) {
+
+        }
+
         return list.stream().map(c -> {
             Long otherUserId = c.getBuyerId().equals(userId) ? c.getSellerId() : c.getBuyerId();
             Optional<ListingMessage> lastMsg = messageRepository.findTopByConversationIdOrderBySentAtDesc(c.getId());
            String lastText = lastMsg.map(ListingMessage::getContent).orElse("Chat started");
             LocalDateTime lastTime = lastMsg.map(ListingMessage::getSentAt).orElse(c.getStartedAt());
+            String realName = nameMap.get(otherUserId);
+            String displayName = (realName != null && !realName.isBlank())
+                    ? realName
+                    : (otherUserId != null ? "User #" + otherUserId : "User");
             return new ListingConversationResponse(
                     c.getId(),
                     c.getListingId(),
                     otherUserId,
-                    otherUserId != null ? "User #" + otherUserId : "User",
+                    displayName,
                     lastText,
                     lastTime
             );
