@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 
@@ -23,11 +24,13 @@ import java.util.stream.Collectors;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-
 public class TripMatchNotificationListener {
 
     private final UserServiceClient userServiceClient;
-      private final JavaMailSender mailSender;
+    private final JavaMailSender mailSender;
+
+    @Value("${app.frontend.url:http://localhost:5173}")
+    private String frontendUrl;
 
     @Async("notificationExecutor")
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
@@ -58,9 +61,21 @@ public class TripMatchNotificationListener {
                 List<SimpleMailMessage>  messageToSend = new ArrayList<>();
                 String travelDate = event.getNewTrip().getTravelDateTime() != null?
                         event.getNewTrip().getTravelDateTime().toLocalDate().toString():"an upcoming date";
-                String subject = "CollegeTravel - a new travel partner just matched your trip!";
-                String body = "A new travel partner just matched your upcoming trip from " +
-                        event.getNewTrip().getSourcePoint() + " to " + event.getNewTrip().getBoardingStation() + " on " + travelDate +"!";
+                String baseUrl = (frontendUrl != null && frontendUrl.endsWith("/")) ?
+                        frontendUrl.substring(0, frontendUrl.length() - 1) : frontendUrl;
+                String tripDetailsUrl = baseUrl + "/view-details/" + event.getNewTrip().getId();
+
+                String subject = "SquadStation - A new travel partner just matched your trip!";
+                String body = "Hello,\n\n" +
+                        "Great news! A new travel partner just matched your upcoming trip.\n\n" +
+                        "Trip Details:\n" +
+                        "• Route: " + event.getNewTrip().getSourcePoint() + " -> " + event.getNewTrip().getBoardingStation() + "\n" +
+                        "• Date: " + travelDate + "\n\n" +
+                        "Click the link below to view trip details and connect with your squad in chat:\n" +
+                        tripDetailsUrl + "\n\n" +
+                        "Safe travels,\n" +
+                        "SquadStation Team";
+
                 for (Long userId: recipientUserIds){
                     String email = emailMap.get(userId);
                     if (email!= null && !email.isBlank()){

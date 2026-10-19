@@ -54,5 +54,6 @@ feign:
 server:
       port: 8082
 
-
-
+app:
+  frontend:
+    url: ${FRONTEND_URL:http://localhost:5173}
