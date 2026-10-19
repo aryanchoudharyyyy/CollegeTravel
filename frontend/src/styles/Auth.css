@@ -233,6 +233,16 @@
   margin-bottom: var(--space-2);
 }
 
+.auth-success {
+  background-color: #f0fdf4;
+  color: #16a34a;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  border-left: 3px solid #16a34a;
+  margin-bottom: var(--space-2);
+}
+
 /* ====================================================
    OTP
    ==================================================== */

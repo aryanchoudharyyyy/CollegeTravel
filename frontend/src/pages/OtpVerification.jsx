@@ -3,18 +3,29 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { ShieldCheck, Compass } from "lucide-react";
 import "../styles/Auth.css";
-import { verifyOtp } from "../api/authApi";
+import { verifyOtp, sendOtp } from "../api/authApi";
 import { setTokens } from "../utils/token";
 
 function OtpVerification() {
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [timer, setTimer] = useState(30);
+  const [error, setError] = useState("");
+  const [successMsg, setSuccessMsg] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [resending, setResending] = useState(false);
+
   const inputRefs = useRef([]);
   const navigate = useNavigate();
-  const { setIsLoggedIn, setUser } = useAuth();
+  const { setIsLoggedIn } = useAuth();
   const location = useLocation();
   const collegeEmail = location.state?.collegeEmail;
-  console.log("College Email:", collegeEmail);
+
+  // Safeguard: Redirect to login if user directly visited/refreshed without email state
+  useEffect(() => {
+    if (!collegeEmail) {
+      navigate("/login", { replace: true });
+    }
+  }, [collegeEmail, navigate]);
 
   useEffect(() => {
     if (timer > 0) {
@@ -25,17 +36,15 @@ function OtpVerification() {
     }
   }, [timer]);
 
-  // Logic for when they type 
+  // Logic for typing in 6-digit OTP boxes
   const handleChange = (index, e) => {
     const value = e.target.value;
-    if (isNaN(value)) return; // Stop if they typed a letter 
+    if (isNaN(value)) return;
     
     const newOtp = [...otp];
-    // Only keep the very last number they typed in this specific box   
     newOtp[index] = value.substring(value.length - 1);
     setOtp(newOtp);
     
-    // If they typed a number, and it's not the last box, laser point to the next box and focus it!
     if (value && index < 5 && inputRefs.current[index + 1]) {
       inputRefs.current[index + 1].focus();
     }
@@ -47,33 +56,61 @@ function OtpVerification() {
     }
   };
 
-async  function handleVerify(e) {
+  const handleResend = async () => {
+    if (!collegeEmail || resending) return;
+    setError("");
+    setSuccessMsg("");
+    setResending(true);
+    try {
+      await sendOtp(collegeEmail);
+      setTimer(30);
+      setSuccessMsg("A new code has been sent to your college email.");
+      setTimeout(() => setSuccessMsg(""), 5000);
+    } catch (err) {
+      setError(
+        err.response?.data?.message ||
+        (typeof err.response?.data === "string" ? err.response?.data : null) ||
+        "Failed to resend code. Please try again."
+      );
+    } finally {
+      setResending(false);
+    }
+  };
+
+  async function handleVerify(e) {
     e.preventDefault();
     const otpValue = otp.join("");
-
-     
-  try {
-    const response = await verifyOtp(collegeEmail,otpValue);
-    
-   
-    // Tokens ko save karein using our setTokens utility
-    if (response.data?.accessToken && response.data?.refreshToken) {
-        setTokens(response.data.accessToken, response.data.refreshToken);
+    if (otpValue.length !== 6) {
+      setError("Please enter the complete 6-digit code.");
+      return;
     }
-     // AuthContext me user ko logged in mark karein
-    setIsLoggedIn(true);
-    
-    
-    navigate("/home");
-  } catch (error) {
-    console.log(error.response?.data);
-  }
-    
+
+    setError("");
+    setSuccessMsg("");
+    setLoading(true);
+
+    try {
+      const response = await verifyOtp(collegeEmail, otpValue);
+      if (response.data?.accessToken && response.data?.refreshToken) {
+        setTokens(response.data.accessToken, response.data.refreshToken);
+      }
+      setIsLoggedIn(true);
+      navigate("/home");
+    } catch (err) {
+      console.error("OTP verification failed:", err);
+      const errMsg =
+        err.response?.data?.message ||
+        (typeof err.response?.data === "string" ? err.response?.data : null) ||
+        "Invalid or expired OTP. Please try again.";
+      setError(errMsg);
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
     <div className="auth-wrapper">
-      {/* Left — Image Panel (slides in from left) */}
+      {/* Left — Image Panel */}
       <div className="auth-image-panel">
         <img src="/auth-hero.jpg" alt="Students on campus" />
         <div className="auth-image-overlay">
@@ -82,10 +119,8 @@ async  function handleVerify(e) {
         </div>
       </div>
 
-      {/* Right — Form Panel (slides in from right) */}
+      {/* Right — Form Panel */}
       <div className="auth-form-panel">
-
-
         <div className="auth-card">
           {/* Brand */}
           <div className="auth-brand">
@@ -101,8 +136,15 @@ async  function handleVerify(e) {
               <ShieldCheck size={30} />
             </div>
             <h1>Verify Your Email</h1>
-            <p>We've sent a 6-digit code to your college email</p>
+            <p>
+              We've sent a 6-digit code to{" "}
+              <strong>{collegeEmail || "your college email"}</strong>
+            </p>
           </div>
+
+          {/* Error & Success Feedback */}
+          {error && <div className="auth-error">{error}</div>}
+          {successMsg && <div className="auth-success">{successMsg}</div>}
 
           {/* OTP Form */}
           <form className="auth-form" onSubmit={handleVerify}>
@@ -121,9 +163,13 @@ async  function handleVerify(e) {
                 />
               ))}
             </div>
-           
-            <button type="submit" className="btn btn-primary auth-btn-submit">
-              Verify code
+
+            <button
+              type="submit"
+              className="btn btn-primary auth-btn-submit"
+              disabled={loading}
+            >
+              {loading ? "Verifying..." : "Verify code"}
             </button>
           </form>
 
@@ -135,8 +181,13 @@ async  function handleVerify(e) {
                 00:{timer < 10 ? `0${timer}` : timer}
               </span>
             ) : (
-              <button className="resend-link" onClick={() => setTimer(30)}>
-                Resend Code
+              <button
+                type="button"
+                className="resend-link"
+                onClick={handleResend}
+                disabled={resending}
+              >
+                {resending ? "Sending..." : "Resend Code"}
               </button>
             )}
           </p>
