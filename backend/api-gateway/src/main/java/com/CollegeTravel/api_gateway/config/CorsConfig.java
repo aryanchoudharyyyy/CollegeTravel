@@ -1,5 +1,6 @@
 package com.CollegeTravel.api_gateway.config;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.cors.CorsConfiguration;
@@ -11,13 +12,15 @@ import java.util.List;
 @Configuration
 public class CorsConfig {
 
+    @Value("${cors.allowed-origin:http://localhost:5173}")
+    private String frontendOrigin;
     @Bean
     public CorsWebFilter corsWebFilter() {
 
         CorsConfiguration config = new CorsConfiguration();
 
         config.setAllowedOrigins(
-                List.of("http://localhost:5173")
+                List.of(frontendOrigin)
         );
 
         config.setAllowedMethods(

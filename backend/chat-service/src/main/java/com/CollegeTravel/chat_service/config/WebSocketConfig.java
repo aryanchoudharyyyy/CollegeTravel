@@ -3,6 +3,7 @@ package com.CollegeTravel.chat_service.config;
 import com.CollegeTravel.chat_service.security.WebSocketAuthInterceptor;
 import com.CollegeTravel.chat_service.security.WebSocketSubscriptionInterceptor;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.simp.config.ChannelRegistration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
@@ -24,15 +25,17 @@ import java.nio.charset.StandardCharsets;
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     private final WebSocketAuthInterceptor webSocketAuthInterceptor;
     private final WebSocketSubscriptionInterceptor webSocketSubscriptionInterceptor;
+    @Value("${FRONTEND_ORIGIN:http://localhost:5173}")
+    private String frontendOrigin;
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry){
         // Modern Native WebSocket endpoint (Solves the Vite crash!)
         registry.addEndpoint("/api/chat/ws")
-                .setAllowedOriginPatterns("*");
+                .setAllowedOrigins(frontendOrigin);
 
         // Fallback with SockJS just in case
         registry.addEndpoint("/api/chat/ws")
-                .setAllowedOriginPatterns("*")
+                .setAllowedOrigins(frontendOrigin)
                 .withSockJS();
 
         registry.setErrorHandler(stompErrorHandler());

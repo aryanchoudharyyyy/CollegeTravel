@@ -7,6 +7,8 @@ spring:
     servlet:
       max-text-message-size: 16384
       max-binary-message-size: 16384
+
+FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:http://localhost:5173}
 server:
   port: 8085
 resilience4j:
