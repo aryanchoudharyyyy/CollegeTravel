@@ -1,132 +1,211 @@
-version: '3.8'
-
 services:
-  # ==========================================
-  # INFRASTRUCTURE (DB & Message Broker)
-  # ==========================================
   postgres-db:
     image: postgres:15
-    container_name: postgres-db
+    restart: unless-stopped
     environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      # Aap chahein toh specific databases bash script se bana sakte hain,
-      # ya Hibernate auto-ddl se manage kar lenge
-    ports:
-      - "5432:5432"
+      POSTGRES_USER: ${POSTGRES_USER:?Set POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
     volumes:
-      # Ye line docker ko bolegi ki start hote hi in saare databases ko create kar de
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+      - postgres-data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
   rabbitmq:
     image: rabbitmq:3-management
-    container_name: rabbitmq
-    ports:
-      - "5672:5672"   # App communication port
-      - "15672:15672" # RabbitMQ UI port
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USERNAME:?Set RABBITMQ_USERNAME}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?Set RABBITMQ_PASSWORD}
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
-  # ==========================================
-  # CORE SERVICES (Eureka, Config, Gateway)
-  # ==========================================
   config-server:
     build:
       context: ./ConfigServer
-    container_name: config-server
-    ports:
-      - "8888:8888"
+    restart: unless-stopped
+    environment:
+      CONFIG_SERVER_USERNAME: ${CONFIG_SERVER_USERNAME:?Set CONFIG_SERVER_USERNAME}
+      CONFIG_SERVER_PASSWORD: ${CONFIG_SERVER_PASSWORD:?Set CONFIG_SERVER_PASSWORD}
+      CONFIG_REPO_USERNAME: ${CONFIG_REPO_USERNAME:?Set CONFIG_REPO_USERNAME}
+      CONFIG_REPO_PASSWORD: ${CONFIG_REPO_PASSWORD:?Set CONFIG_REPO_PASSWORD}
+    expose:
+      - "8888"
 
   eureka-server:
     build:
       context: ./EurekaService
-    container_name: eureka-server
-    ports:
-      - "8761:8761"
-    depends_on:
-      - config-server
+    restart: unless-stopped
+    expose:
+      - "8761"
 
   api-gateway:
     build:
       context: ./api-gateway
+    restart: unless-stopped
     environment:
-      - EUREKA_URL=http://eureka-server:8761/eureka/
-    container_name: api-gateway
+      EUREKA_URL: http://eureka-server:8761/eureka/
     ports:
       - "8080:8080"
     depends_on:
       - eureka-server
 
-  # ==========================================
-  # BUSINESS SERVICES
-  # ==========================================
   user-service:
     build:
       context: ./user-service
+    restart: unless-stopped
     environment:
-      - CONFIG_SERVER_URL=http://config-server:8888
-      - EUREKA_URL=http://eureka-server:8761/eureka/
-      - DB_HOST=postgres-db
-    container_name: user-service
-    ports:
-      - "8081:8081"
+      CONFIG_SERVER_URL: http://config-server:8888
+      CONFIG_SERVER_USERNAME: ${CONFIG_SERVER_USERNAME:?Set CONFIG_SERVER_USERNAME}
+      CONFIG_SERVER_PASSWORD: ${CONFIG_SERVER_PASSWORD:?Set CONFIG_SERVER_PASSWORD}
+      SPRING_CLOUD_CONFIG_USERNAME: ${CONFIG_SERVER_USERNAME:?Set CONFIG_SERVER_USERNAME}
+      SPRING_CLOUD_CONFIG_PASSWORD: ${CONFIG_SERVER_PASSWORD:?Set CONFIG_SERVER_PASSWORD}
+      EUREKA_URL: http://eureka-server:8761/eureka/
+      DB_HOST: postgres-db
+      DB_USERNAME: ${POSTGRES_USER:?Set POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET}
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:?Set INTERNAL_API_KEY}
+      MAIL_HOST: ${MAIL_HOST:?Set MAIL_HOST}
+      MAIL_PORT: ${MAIL_PORT:-587}
+      MAIL_USERNAME: ${MAIL_USERNAME:?Set MAIL_USERNAME}
+      MAIL_APP_PASSWORD: ${MAIL_APP_PASSWORD:?Set MAIL_APP_PASSWORD}
+      MAIL_FROM: ${MAIL_FROM:?Set MAIL_FROM}
+      JPA_SHOW_SQL: "false"
+      JPA_FORMAT_SQL: "false"
     depends_on:
-      - postgres-db
-      - eureka-server
+      postgres-db:
+        condition: service_healthy
+      config-server:
+        condition: service_started
+      eureka-server:
+        condition: service_started
 
   trip-service:
     build:
       context: ./trip-service
+    restart: unless-stopped
     environment:
-      - CONFIG_SERVER_URL=http://config-server:8888
-      - EUREKA_URL=http://eureka-server:8761/eureka/
-      - DB_HOST=postgres-db
-      - RABBITMQ_HOST=rabbitmq
-    container_name: trip-service
-    ports:
-      - "8082:8082"
+      CONFIG_SERVER_URL: http://config-server:8888
+      CONFIG_SERVER_USERNAME: ${CONFIG_SERVER_USERNAME:?Set CONFIG_SERVER_USERNAME}
+      CONFIG_SERVER_PASSWORD: ${CONFIG_SERVER_PASSWORD:?Set CONFIG_SERVER_PASSWORD}
+      SPRING_CLOUD_CONFIG_USERNAME: ${CONFIG_SERVER_USERNAME:?Set CONFIG_SERVER_USERNAME}
+      SPRING_CLOUD_CONFIG_PASSWORD: ${CONFIG_SERVER_PASSWORD:?Set CONFIG_SERVER_PASSWORD}
+      EUREKA_URL: http://eureka-server:8761/eureka/
+      DB_HOST: postgres-db
+      DB_USERNAME: ${POSTGRES_USER:?Set POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET}
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:?Set INTERNAL_API_KEY}
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: "5672"
+      RABBITMQ_USERNAME: ${RABBITMQ_USERNAME:?Set RABBITMQ_USERNAME}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:?Set RABBITMQ_PASSWORD}
+      MAIL_HOST: ${MAIL_HOST:?Set MAIL_HOST}
+      MAIL_PORT: ${MAIL_PORT:-587}
+      MAIL_USERNAME: ${MAIL_USERNAME:?Set MAIL_USERNAME}
+      MAIL_APP_PASSWORD: ${MAIL_APP_PASSWORD:?Set MAIL_APP_PASSWORD}
+      JPA_SHOW_SQL: "false"
+      JPA_FORMAT_SQL: "false"
     depends_on:
-      - postgres-db
-      - eureka-server
-      - rabbitmq
+      postgres-db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      config-server:
+        condition: service_started
+      eureka-server:
+        condition: service_started
 
   group-service:
     build:
       context: ./Group-service
+    restart: unless-stopped
     environment:
-      - CONFIG_SERVER_URL=http://config-server:8888
-      - EUREKA_URL=http://eureka-server:8761/eureka/
-      - DB_HOST=postgres-db
-      - RABBITMQ_HOST=rabbitmq
-    container_name: group-service
-
-    ports:
-      - "8084:8084"
+      CONFIG_SERVER_URL: http://config-server:8888
+      CONFIG_SERVER_USERNAME: ${CONFIG_SERVER_USERNAME:?Set CONFIG_SERVER_USERNAME}
+      CONFIG_SERVER_PASSWORD: ${CONFIG_SERVER_PASSWORD:?Set CONFIG_SERVER_PASSWORD}
+      SPRING_CLOUD_CONFIG_USERNAME: ${CONFIG_SERVER_USERNAME:?Set CONFIG_SERVER_USERNAME}
+      SPRING_CLOUD_CONFIG_PASSWORD: ${CONFIG_SERVER_PASSWORD:?Set CONFIG_SERVER_PASSWORD}
+      EUREKA_URL: http://eureka-server:8761/eureka/
+      DB_HOST: postgres-db
+      DB_USERNAME: ${POSTGRES_USER:?Set POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET}
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:?Set INTERNAL_API_KEY}
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: "5672"
+      RABBITMQ_USERNAME: ${RABBITMQ_USERNAME:?Set RABBITMQ_USERNAME}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:?Set RABBITMQ_PASSWORD}
+      JPA_SHOW_SQL: "false"
+      JPA_FORMAT_SQL: "false"
     depends_on:
-      - postgres-db
-      - eureka-server
-      - rabbitmq
+      postgres-db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      config-server:
+        condition: service_started
+      eureka-server:
+        condition: service_started
 
   chat-service:
     build:
       context: ./chat-service
+    restart: unless-stopped
     environment:
-      - CONFIG_SERVER_URL=http://config-server:8888
-      - EUREKA_URL=http://eureka-server:8761/eureka/
-      - DB_HOST=postgres-db
-    container_name: chat-service
-    ports:
-      - "8085:8085"
+      CONFIG_SERVER_URL: http://config-server:8888
+      CONFIG_SERVER_USERNAME: ${CONFIG_SERVER_USERNAME:?Set CONFIG_SERVER_USERNAME}
+      CONFIG_SERVER_PASSWORD: ${CONFIG_SERVER_PASSWORD:?Set CONFIG_SERVER_PASSWORD}
+      SPRING_CLOUD_CONFIG_USERNAME: ${CONFIG_SERVER_USERNAME:?Set CONFIG_SERVER_USERNAME}
+      SPRING_CLOUD_CONFIG_PASSWORD: ${CONFIG_SERVER_PASSWORD:?Set CONFIG_SERVER_PASSWORD}
+      EUREKA_URL: http://eureka-server:8761/eureka/
+      DB_HOST: postgres-db
+      DB_USERNAME: ${POSTGRES_USER:?Set POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET}
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:?Set INTERNAL_API_KEY}
+      JPA_SHOW_SQL: "false"
+      JPA_FORMAT_SQL: "false"
     depends_on:
-      - postgres-db
-      - eureka-server
+      postgres-db:
+        condition: service_healthy
+      config-server:
+        condition: service_started
+      eureka-server:
+        condition: service_started
 
   marketplace-service:
     build:
       context: ./marketplace-service
+    restart: unless-stopped
     environment:
-      - CONFIG_SERVER_URL=http://config-server:8888
-      - EUREKA_URL=http://eureka-server:8761/eureka/
-      - DB_HOST=postgres-db
-    container_name: marketplace-service
-    ports:
-      - "8086:8086"
+      CONFIG_SERVER_URL: http://config-server:8888
+      CONFIG_SERVER_USERNAME: ${CONFIG_SERVER_USERNAME:?Set CONFIG_SERVER_USERNAME}
+      CONFIG_SERVER_PASSWORD: ${CONFIG_SERVER_PASSWORD:?Set CONFIG_SERVER_PASSWORD}
+      SPRING_CLOUD_CONFIG_USERNAME: ${CONFIG_SERVER_USERNAME:?Set CONFIG_SERVER_USERNAME}
+      SPRING_CLOUD_CONFIG_PASSWORD: ${CONFIG_SERVER_PASSWORD:?Set CONFIG_SERVER_PASSWORD}
+      EUREKA_URL: http://eureka-server:8761/eureka/
+      DB_HOST: postgres-db
+      DB_USERNAME: ${POSTGRES_USER:?Set POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET}
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:?Set INTERNAL_API_KEY}
+      JPA_SHOW_SQL: "false"
+      JPA_FORMAT_SQL: "false"
     depends_on:
-      - postgres-db
+      postgres-db:
+        condition: service_healthy
+      config-server:
+        condition: service_started
+      eureka-server:
+        condition: service_started
+
+volumes:
+  postgres-data:
