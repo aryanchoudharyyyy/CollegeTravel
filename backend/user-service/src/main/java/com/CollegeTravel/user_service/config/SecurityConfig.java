@@ -2,7 +2,7 @@ package com.CollegeTravel.user_service.config;
 
 import com.CollegeTravel.user_service.security.InternalApiKeyFilter;
 import com.CollegeTravel.user_service.security.JwtAuthFilter;
-import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -22,6 +22,8 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http, InternalApiKeyFilter internalApiKeyFilter) throws Exception{
         http.csrf(csrf -> csrf.disable())
                 .sessionManagement(session ->session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .exceptionHandling(ex -> ex.authenticationEntryPoint((request, response, exception) ->
+                        response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Unauthorized")))
                 .authorizeHttpRequests(
                         auth-> auth.requestMatchers
                                         ("/api/users/signup", "/api/users/login","/api/users/verify-otp" ,
