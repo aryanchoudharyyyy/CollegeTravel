@@ -40,7 +40,7 @@ function App() {
     <ScrollToTop />
      <Routes>
         {/* === UNPROTECTED ROUTES (Anyone can access) === */}
-        <Route path='/' element={<Splash />}/>
+        <Route path='/' element={<Login />}/>
         <Route path='/login' element={<Login />}/>
         <Route path='/signup' element={<Signup />}/>
         <Route path='/otpVerification' element={<OtpVerification />} />
