@@ -1,8 +1,9 @@
 import axios from "axios";
 import { getAccessToken, getRefreshToken, setTokens, clearTokens } from "../utils/token";
+import { API_BASE_URL } from "../config/runtimeConfig";
 
 const apiClient = axios.create({
-    baseURL: import.meta.env.VITE_API_BASE_URL,
+    baseURL: API_BASE_URL,
     headers: {
         "Content-Type": "application/json",
     },
@@ -36,7 +37,7 @@ apiClient.interceptors.response.use(
                     window.location.href = '/login';
                     return Promise.reject(error);
                 }
-                refreshPromise = axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/users/refresh-token`,{
+                refreshPromise = axios.post(`${API_BASE_URL}/api/users/refresh-token`,{
                     refreshToken: refreshToken
                 }).then(res =>{
                     const newAccessToken = res.data.accessToken;

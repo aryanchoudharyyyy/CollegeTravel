@@ -1,8 +1,8 @@
 import { Client } from "@stomp/stompjs";
 import { getAccessToken } from "../utils/token";
+import { WEBSOCKET_URL } from "../config/runtimeConfig";
 
 // Native WebSocket URL routed through the API Gateway
-const WS_URL = import.meta.env.VITE_WS_URL || "ws://localhost:8080/api/chat/ws";
 
 let stompClient = null;
 let connectionStatusCallback = null;
@@ -14,7 +14,7 @@ export const connectWebSocket = (groupId, onMessage, onStatusChange) => {
     if (onStatusChange) onStatusChange("connecting");
 
     stompClient = new Client({
-        brokerURL: WS_URL,
+        brokerURL: WEBSOCKET_URL,
         connectHeaders: {
             // Your backend interceptor strictly requires this!
             Authorization: `Bearer ${getAccessToken()}`

@@ -121,6 +121,8 @@ dist/
 .env
 .env.*
 !.env.example
+!frontend/.env.production.example
+!backend/.env.production.example
 
 # npm / yarn / pnpm logs
 npm-debug.log*

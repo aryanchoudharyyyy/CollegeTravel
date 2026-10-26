@@ -1,6 +1,11 @@
 server:
   port: 8080
 
+# FRONTEND_ORIGIN is supplied by Compose in deployments. The local default keeps
+# the Vite development server usable without production configuration.
+cors:
+  allowed-origin: ${FRONTEND_ORIGIN:http://localhost:5173}
+
 spring:
   application:
     name: api-gateway

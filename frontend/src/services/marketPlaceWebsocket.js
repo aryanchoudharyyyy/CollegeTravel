@@ -1,6 +1,6 @@
 import { Client } from "@stomp/stompjs";
 import { getAccessToken } from "../utils/token";
-const WS_URL = import.meta.env.VITE_WS_URL || "ws://localhost:8080/api/chat/ws"; 
+import { WEBSOCKET_URL } from "../config/runtimeConfig";
 let stompClient = null;
 let connectionStatusCallBack = null;
 export const connectMarketplaceWebsocket = (conversationId, onMessage, onStatusChange)=>{
@@ -9,7 +9,7 @@ export const connectMarketplaceWebsocket = (conversationId, onMessage, onStatusC
     connectionStatusCallBack = onStatusChange;
     if(onStatusChange) onStatusChange("connecting");
     stompClient = new Client({
-        brokerURL: WS_URL,
+        brokerURL: WEBSOCKET_URL,
         connectHeaders: {
             Authorization: `Bearer ${getAccessToken()}`
 

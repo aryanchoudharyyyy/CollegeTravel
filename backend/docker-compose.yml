@@ -3,7 +3,7 @@ services:
     image: postgres:15
     restart: unless-stopped
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     environment:
       POSTGRES_USER: ${DB_USERNAME:?Set DB_USERNAME}
       POSTGRES_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD}
@@ -38,8 +38,10 @@ services:
       CONFIG_SERVER_PASSWORD: ${CONFIG_SERVER_PASSWORD:?Set CONFIG_SERVER_PASSWORD}
       CONFIG_REPO_USERNAME: ${CONFIG_REPO_USERNAME:?Set CONFIG_REPO_USERNAME}
       CONFIG_REPO_PASSWORD: ${CONFIG_REPO_PASSWORD:?Set CONFIG_REPO_PASSWORD}
+      CONFIG_REPO_URI: ${CONFIG_REPO_URI:-https://github.com/aryanchoudharyyyy/config-repository.git}
+      CONFIG_REPO_BRANCH: ${CONFIG_REPO_BRANCH:-main}
     ports:
-      - "8888:8888"
+      - "127.0.0.1:8888:8888"
     healthcheck:
       test: ["CMD-SHELL", "wget -q --spider http://$${CONFIG_SERVER_USERNAME}:$${CONFIG_SERVER_PASSWORD}@127.0.0.1:8888/trip-service/default || exit 1"]
       interval: 10s
@@ -52,7 +54,7 @@ services:
       context: ./EurekaService
     restart: unless-stopped
     ports:
-      - "8761:8761"
+      - "127.0.0.1:8761:8761"
     healthcheck:
       test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:8761/actuator/health || exit 1"]
       interval: 10s
@@ -66,26 +68,43 @@ services:
     restart: unless-stopped
     environment:
       FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:?Set FRONTEND_ORIGIN}
-      EUREKA_URL: http://eureka-server:8761/eureka/
+      EUREKA_URL: ${EUREKA_URL:-http://eureka-server:8761/eureka/}
     ports:
-      - "8080:8080"
+      - "${GATEWAY_BIND_ADDRESS:-127.0.0.1}:8080:8080"
     depends_on:
       eureka-server:
         condition: service_healthy
+
+  tls-proxy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    profiles: [production]
+    environment:
+      API_DOMAIN: ${API_DOMAIN:?Set API_DOMAIN}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - api-gateway
 
   user-service:
     build:
       context: ./user-service
     restart: unless-stopped
     environment:
-      CONFIG_SERVER_URL: http://config-server:8888
+      CONFIG_SERVER_URL: ${CONFIG_SERVER_URL:-http://config-server:8888}
       CONFIG_SERVER_USERNAME: ${CONFIG_SERVER_USERNAME:?Set CONFIG_SERVER_USERNAME}
       CONFIG_SERVER_PASSWORD: ${CONFIG_SERVER_PASSWORD:?Set CONFIG_SERVER_PASSWORD}
       SPRING_CLOUD_CONFIG_USERNAME: ${CONFIG_SERVER_USERNAME:?Set CONFIG_SERVER_USERNAME}
       SPRING_CLOUD_CONFIG_PASSWORD: ${CONFIG_SERVER_PASSWORD:?Set CONFIG_SERVER_PASSWORD}
       FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:?Set FRONTEND_ORIGIN}
-      EUREKA_URL: http://eureka-server:8761/eureka/
-      DB_HOST: postgres-db
+      EUREKA_URL: ${EUREKA_URL:-http://eureka-server:8761/eureka/}
+      DB_HOST: ${DB_HOST:-postgres-db}
       DB_USERNAME: ${DB_USERNAME:?Set DB_USERNAME}
       DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD}
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET}
@@ -110,19 +129,20 @@ services:
       context: ./trip-service
     restart: unless-stopped
     environment:
-      CONFIG_SERVER_URL: http://config-server:8888
+      CONFIG_SERVER_URL: ${CONFIG_SERVER_URL:-http://config-server:8888}
       CONFIG_SERVER_USERNAME: ${CONFIG_SERVER_USERNAME:?Set CONFIG_SERVER_USERNAME}
       CONFIG_SERVER_PASSWORD: ${CONFIG_SERVER_PASSWORD:?Set CONFIG_SERVER_PASSWORD}
       SPRING_CLOUD_CONFIG_USERNAME: ${CONFIG_SERVER_USERNAME:?Set CONFIG_SERVER_USERNAME}
       SPRING_CLOUD_CONFIG_PASSWORD: ${CONFIG_SERVER_PASSWORD:?Set CONFIG_SERVER_PASSWORD}
-      EUREKA_URL: http://eureka-server:8761/eureka/
-      DB_HOST: postgres-db
+      EUREKA_URL: ${EUREKA_URL:-http://eureka-server:8761/eureka/}
+      DB_HOST: ${DB_HOST:-postgres-db}
       DB_USERNAME: ${DB_USERNAME:?Set DB_USERNAME}
       DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD}
+      FRONTEND_URL: ${FRONTEND_URL:?Set FRONTEND_URL}
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET}
       INTERNAL_API_KEY: ${INTERNAL_API_KEY:?Set INTERNAL_API_KEY}
-      RABBITMQ_HOST: rabbitmq
-      RABBITMQ_PORT: "5672"
+      RABBITMQ_HOST: ${RABBITMQ_HOST:-rabbitmq}
+      RABBITMQ_PORT: ${RABBITMQ_PORT:-5672}
       RABBITMQ_USERNAME: ${RABBITMQ_USERNAME:?Set RABBITMQ_USERNAME}
       RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:?Set RABBITMQ_PASSWORD}
       MAIL_HOST: ${MAIL_HOST:?Set MAIL_HOST}
@@ -146,19 +166,19 @@ services:
       context: ./Group-service
     restart: unless-stopped
     environment:
-      CONFIG_SERVER_URL: http://config-server:8888
+      CONFIG_SERVER_URL: ${CONFIG_SERVER_URL:-http://config-server:8888}
       CONFIG_SERVER_USERNAME: ${CONFIG_SERVER_USERNAME:?Set CONFIG_SERVER_USERNAME}
       CONFIG_SERVER_PASSWORD: ${CONFIG_SERVER_PASSWORD:?Set CONFIG_SERVER_PASSWORD}
       SPRING_CLOUD_CONFIG_USERNAME: ${CONFIG_SERVER_USERNAME:?Set CONFIG_SERVER_USERNAME}
       SPRING_CLOUD_CONFIG_PASSWORD: ${CONFIG_SERVER_PASSWORD:?Set CONFIG_SERVER_PASSWORD}
-      EUREKA_URL: http://eureka-server:8761/eureka/
-      DB_HOST: postgres-db
+      EUREKA_URL: ${EUREKA_URL:-http://eureka-server:8761/eureka/}
+      DB_HOST: ${DB_HOST:-postgres-db}
       DB_USERNAME: ${DB_USERNAME:?Set DB_USERNAME}
       DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD}
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET}
       INTERNAL_API_KEY: ${INTERNAL_API_KEY:?Set INTERNAL_API_KEY}
-      RABBITMQ_HOST: rabbitmq
-      RABBITMQ_PORT: "5672"
+      RABBITMQ_HOST: ${RABBITMQ_HOST:-rabbitmq}
+      RABBITMQ_PORT: ${RABBITMQ_PORT:-5672}
       RABBITMQ_USERNAME: ${RABBITMQ_USERNAME:?Set RABBITMQ_USERNAME}
       RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:?Set RABBITMQ_PASSWORD}
       JPA_SHOW_SQL: "false"
@@ -178,13 +198,13 @@ services:
       context: ./chat-service
     restart: unless-stopped
     environment:
-      CONFIG_SERVER_URL: http://config-server:8888
+      CONFIG_SERVER_URL: ${CONFIG_SERVER_URL:-http://config-server:8888}
       CONFIG_SERVER_USERNAME: ${CONFIG_SERVER_USERNAME:?Set CONFIG_SERVER_USERNAME}
       CONFIG_SERVER_PASSWORD: ${CONFIG_SERVER_PASSWORD:?Set CONFIG_SERVER_PASSWORD}
       SPRING_CLOUD_CONFIG_USERNAME: ${CONFIG_SERVER_USERNAME:?Set CONFIG_SERVER_USERNAME}
       SPRING_CLOUD_CONFIG_PASSWORD: ${CONFIG_SERVER_PASSWORD:?Set CONFIG_SERVER_PASSWORD}
-      EUREKA_URL: http://eureka-server:8761/eureka/
-      DB_HOST: postgres-db
+      EUREKA_URL: ${EUREKA_URL:-http://eureka-server:8761/eureka/}
+      DB_HOST: ${DB_HOST:-postgres-db}
       DB_USERNAME: ${DB_USERNAME:?Set DB_USERNAME}
       DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD}
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET}
@@ -204,13 +224,13 @@ services:
       context: ./marketplace-service
     restart: unless-stopped
     environment:
-      CONFIG_SERVER_URL: http://config-server:8888
+      CONFIG_SERVER_URL: ${CONFIG_SERVER_URL:-http://config-server:8888}
       CONFIG_SERVER_USERNAME: ${CONFIG_SERVER_USERNAME:?Set CONFIG_SERVER_USERNAME}
       CONFIG_SERVER_PASSWORD: ${CONFIG_SERVER_PASSWORD:?Set CONFIG_SERVER_PASSWORD}
       SPRING_CLOUD_CONFIG_USERNAME: ${CONFIG_SERVER_USERNAME:?Set CONFIG_SERVER_USERNAME}
       SPRING_CLOUD_CONFIG_PASSWORD: ${CONFIG_SERVER_PASSWORD:?Set CONFIG_SERVER_PASSWORD}
-      EUREKA_URL: http://eureka-server:8761/eureka/
-      DB_HOST: postgres-db
+      EUREKA_URL: ${EUREKA_URL:-http://eureka-server:8761/eureka/}
+      DB_HOST: ${DB_HOST:-postgres-db}
       DB_USERNAME: ${DB_USERNAME:?Set DB_USERNAME}
       DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD}
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET}
@@ -227,3 +247,5 @@ services:
 
 volumes:
   postgres-data:
+  caddy-data:
+  caddy-config:
