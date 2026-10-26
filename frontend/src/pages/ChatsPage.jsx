@@ -36,7 +36,7 @@ const fmtDate = (d) => {
 // ---------------------------------------------------------
 // COMPONENT: Group List (Left Panel)
 // ---------------------------------------------------------
-function GroupList({ groups, selectedGroupId, onSelectGroup }) {
+function GroupList({ groups, selectedGroupId, onSelectGroup, onLoadMore, hasMore, loadingMore }) {
   return (
     <div className="chat-group-list">
       <div className="chat-group-list-header">
@@ -78,6 +78,11 @@ function GroupList({ groups, selectedGroupId, onSelectGroup }) {
           </div>
         )}
       </div>
+      {hasMore && (
+        <button className="btn btn-ghost" onClick={onLoadMore} disabled={loadingMore}>
+          {loadingMore ? "Loading…" : "Load more groups"}
+        </button>
+      )}
     </div>
   );
 }
@@ -302,6 +307,9 @@ export default function ChatsPage() {
   const navigate = useNavigate();
  
   const [groups, setGroups] = useState([]);
+  const [groupsPage, setGroupsPage] = useState(0);
+  const [hasMoreGroups, setHasMoreGroups] = useState(false);
+  const [loadingMoreGroups, setLoadingMoreGroups] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [messages, setMessages] = useState([]);
   const [connectionStatus, setConnectionStatus] = useState("disconnected");
@@ -313,9 +321,10 @@ export default function ChatsPage() {
   const groupIdFromUrl = searchParams.get("groupId");
 
   useEffect(() => {
-    getMyGroups()
+    getMyGroups(0, 20)
     .then((res) => {
-      const fetched = (res.data || []).map((g) => ({
+      const page = res.data;
+      const fetched = (page?.content || []).map((g) => ({
         groupId: g.id,
         route: `${g.sourcePoint} -> ${g.boardingStation}`,
         travelDate: g.travelDate,
@@ -325,6 +334,8 @@ export default function ChatsPage() {
         rawGroup: g,
       }));
       setGroups(fetched);
+      setGroupsPage(0);
+      setHasMoreGroups(page?.last === false);
 
       //Auto select group from ?groupId = in the url
       if(groupIdFromUrl){
@@ -341,6 +352,36 @@ export default function ChatsPage() {
       console.error("Failed to load user Groups:", err);
     });
 }, [groupIdFromUrl]);
+
+  const loadMoreGroups = async () => {
+    if (loadingMoreGroups || !hasMoreGroups) return;
+    const nextPage = groupsPage + 1;
+    setLoadingMoreGroups(true);
+    try {
+      const response = await getMyGroups(nextPage, 20);
+      const fetched = (response.data?.content || []).map((g) => ({
+        groupId: g.id,
+        route: `${g.sourcePoint} -> ${g.boardingStation}`,
+        travelDate: g.travelDate,
+        lastMessage: "Tap to Chat",
+        lastMessageTime: "",
+        members: "Groups",
+        rawGroup: g,
+      }));
+      setGroups((previous) => [...previous, ...fetched]);
+      setGroupsPage(nextPage);
+      setHasMoreGroups(response.data?.last === false);
+      const linkedGroup = fetched.find((g) => String(g.groupId) === String(groupIdFromUrl));
+      if (linkedGroup) {
+        setSelectedGroup(linkedGroup);
+        setMobileShowChat(true);
+      }
+    } catch (err) {
+      console.error("Failed to load more groups:", err);
+    } finally {
+      setLoadingMoreGroups(false);
+    }
+  };
 
   // Connect/disconnect WebSocket when selected group changes
   useEffect(() => {
@@ -399,6 +440,9 @@ export default function ChatsPage() {
             groups={groups}
             selectedGroupId={selectedGroup?.groupId}
             onSelectGroup={handleSelectGroup}
+          onLoadMore={loadMoreGroups}
+          hasMore={hasMoreGroups}
+          loadingMore={loadingMoreGroups}
           />
         </div>
 

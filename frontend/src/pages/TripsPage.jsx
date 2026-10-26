@@ -35,11 +35,16 @@ export default function TripsPage() {
   const navigate = useNavigate();
   const [trips, setTrips] = useState([]);
   const [sortKey, setSortKey] = useState("newest");
+  const [tripPage, setTripPage] = useState(0);
+  const [hasMoreTrips, setHasMoreTrips] = useState(false);
+  const [loadingTrips, setLoadingTrips] = useState(true);
 
-  useEffect(()=>{
-    getExploreTrips()
+  useEffect(() => {
+    setLoadingTrips(true);
+    setTripPage(0);
+    getExploreTrips(0, 20, sortKey)
       .then((response) => {
-        const mappedTrips = response.data.map(item => ({
+        const mappedTrips = (response.data?.content || []).map(item => ({
           id: item.trip.id,
           sourcePoint: item.trip.sourcePoint,
            boardingStation: item.trip.boardingStation,
@@ -51,11 +56,39 @@ export default function TripsPage() {
           rawTrip: item.trip // Keep the raw backend data just in case
         }));
         setTrips(mappedTrips);
+        setHasMoreTrips(response.data?.last === false);
       })
       .catch((error)=> {
         console.error("Failed to load explore feed:", error);
-      });
-  }, []);
+      })
+      .finally(() => setLoadingTrips(false));
+  }, [sortKey]);
+
+  const loadMoreTrips = async () => {
+    if (loadingTrips || !hasMoreTrips) return;
+    const nextPage = tripPage + 1;
+    setLoadingTrips(true);
+    try {
+      const response = await getExploreTrips(nextPage, 20, sortKey);
+      const mappedTrips = (response.data?.content || []).map(item => ({
+        id: item.trip.id,
+        sourcePoint: item.trip.sourcePoint,
+        boardingStation: item.trip.boardingStation,
+        finalDestination: item.trip.destination || "",
+        travelDate: item.trip.travelDateTime.split('T')[0],
+        travelTime: item.trip.travelDateTime.split('T')[1].substring(0, 5),
+        postedBy: item.postedBy,
+        rawTrip: item.trip,
+      }));
+      setTrips((previous) => [...previous, ...mappedTrips]);
+      setTripPage(nextPage);
+      setHasMoreTrips(response.data?.last === false);
+    } catch (error) {
+      console.error("Failed to load more trips:", error);
+    } finally {
+      setLoadingTrips(false);
+    }
+  };
 
   const sortedTrips = useMemo(() => {
     const list = [...trips];
@@ -188,10 +221,16 @@ export default function TripsPage() {
             );
           })}
 
-          {sortedTrips.length === 0 && (
+          {!loadingTrips && sortedTrips.length === 0 && (
             <div className="empty-state animate-in" style={{ animationDelay: "0.1s" }}>
               No trips posted yet. Be the first to plan one.
             </div>
+          )}
+
+          {hasMoreTrips && (
+            <button className="post-trip-btn" onClick={loadMoreTrips} disabled={loadingTrips}>
+              {loadingTrips ? "Loading…" : "Load more trips"}
+            </button>
           )}
 
         </div>

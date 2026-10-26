@@ -34,18 +34,41 @@ function MyListings() {
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState("listings");
     const [myTrips, setMyTrips] = useState([]);
+    const [myTripsPage, setMyTripsPage] = useState(0);
+    const [myTripsTotal, setMyTripsTotal] = useState(0);
+    const [hasMoreTrips, setHasMoreTrips] = useState(false);
+    const [loadingMoreTrips, setLoadingMoreTrips] = useState(false);
      const [myTickets, setMyTickets] = useState([]);
     const [loadingTickets, setLoadingTickets] = useState(true);
 useEffect(()=>{
-    getMyTrips()
+    getMyTrips(0, 20)
     .then((res)=> {
-        setMyTrips(res.data);
+        setMyTrips(res.data?.content || []);
+        setMyTripsTotal(res.data?.totalElements || 0);
+        setHasMoreTrips(res.data?.last === false);
     })
     .catch((err)=>{
         console.error("Failed to load my trips:", err);
     });
     loadMyTickets();
 },[]);
+
+  const loadMoreTrips = async () => {
+      if (loadingMoreTrips || !hasMoreTrips) return;
+      const nextPage = myTripsPage + 1;
+      setLoadingMoreTrips(true);
+      try {
+          const response = await getMyTrips(nextPage, 20);
+          setMyTrips((previous) => [...previous, ...(response.data?.content || [])]);
+          setMyTripsPage(nextPage);
+          setMyTripsTotal(response.data?.totalElements || 0);
+          setHasMoreTrips(response.data?.last === false);
+      } catch (err) {
+          console.error("Failed to load more trips:", err);
+      } finally {
+          setLoadingMoreTrips(false);
+      }
+  };
 
   const loadMyTickets = () => {
         setLoadingTickets(true);
@@ -90,7 +113,7 @@ useEffect(()=>{
                 </button>
                 <button className={`pr-tab ${activeTab === 'trips' ? 'active' : ''}`}
                 onClick={() => setActiveTab('trips')}>
-                    My Trips ({myTrips.length})
+                    My Trips ({myTripsTotal})
                 </button>
                 {/* TODO: Re-enable when interest feature is ready
                 <button className={`pr-tab ${activeTab === 'interests' ? 'active' :''}`}
@@ -175,6 +198,11 @@ useEffect(()=>{
                             myTrips.map(tripItem => (
                                 <TripCard key={tripItem.id} trip={tripItem} onDelete={handleDeleteTrip} />
                             ))
+                        )}
+                        {hasMoreTrips && (
+                            <button className="pr-btn-primary" onClick={loadMoreTrips} disabled={loadingMoreTrips}>
+                                {loadingMoreTrips ? "Loading…" : "Load more trips"}
+                            </button>
                         )}
                     </div>
                 )}

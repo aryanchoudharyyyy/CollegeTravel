@@ -37,6 +37,8 @@ export const getMyListings= (page =0, size=20)=> {
 export const getListingById = (listingId) => {
     return apiClient.get(`/api/marketplace/listings/${listingId}`);
 };
-export const getMyListingConversations = () => {
-    return apiClient.get("/api/chat/listing-conversations/mine");
+export const getMyListingConversations = (page = 0, size = 20) => {
+    return apiClient.get("/api/chat/listing-conversations/mine", {
+        params: { page, size, sort: "startedAt,desc" }
+    });
 };

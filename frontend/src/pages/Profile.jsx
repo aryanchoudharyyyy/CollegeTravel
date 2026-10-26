@@ -89,10 +89,10 @@ function Profile() {
             .finally(() => setLoading(false));
         // Real travel stats
         getMyTrips()
-            .then((res) => setStats((prev) => ({ ...prev, tripsCreated: res.data?.length || 0 })))
+            .then((res) => setStats((prev) => ({ ...prev, tripsCreated: res.data?.totalElements ?? res.data?.length ?? 0 })))
             .catch(() => {});
         getMyGroups()
-            .then((res) => setStats((prev) => ({ ...prev, groupsJoined: res.data?.length || 0 })))
+            .then((res) => setStats((prev) => ({ ...prev, groupsJoined: res.data?.totalElements ?? res.data?.length ?? 0 })))
             .catch(() => {});
     }, []);    
 

@@ -13,6 +13,9 @@ import com.CollegeTravel.Group_service.repository.GroupRepository;
 import com.CollegeTravel.Group_service.service.GroupService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -85,17 +88,19 @@ public class GroupServiceImpl implements GroupService {
         return  groupMemberRepository.existsByGroup_IdAndUserId(groupId,userId);
     }
     @Override
-    public GroupMembersResponse getGroupMembers(Long groupId, Long requestingUserId){
+    public GroupMembersResponse getGroupMembers(Long groupId, Long requestingUserId, Pageable pageable){
         if(!groupMemberRepository.existsByGroup_IdAndUserId(groupId,requestingUserId)){
             throw  new NotGroupMemberException("You are not a member of this group");
         }
-        List<Long> userIds = groupMemberRepository.findByGroup_Id(groupId).stream()
+        Page<GroupMember> memberPage = groupMemberRepository.findByGroup_Id(groupId, pageable);
+        List<Long> userIds = memberPage.getContent().stream()
                 .map(GroupMember::getUserId)
                 .toList();
-        List<String> names = userLookupClient.getUsersByIds(userIds).stream()
+        List<String> names = userIds.isEmpty() ? List.of() : userLookupClient.getUsersByIds(userIds).stream()
                 .map(UserSummaryDTO::name)
                 .toList();
-        return new GroupMembersResponse(names.size(), names);
+        return new GroupMembersResponse(memberPage.getTotalElements(), names, memberPage.getNumber(),
+                memberPage.getSize(), memberPage.getTotalPages(), memberPage.hasNext());
     }
 
     @Override
@@ -113,8 +118,8 @@ public class GroupServiceImpl implements GroupService {
     }
 
     @Override
-    public List<GroupResponse> getMyGroups(Long userId) {
-        return groupMemberRepository.findGroupsByUserId(userId).stream()
+    public Page<GroupResponse> getMyGroups(Long userId, Pageable pageable) {
+        return groupMemberRepository.findGroupsByUserId(userId, pageable)
                 .map(group -> new GroupResponse(
                         group.getId(),
                         group.getSourcePoint(),
@@ -122,8 +127,7 @@ public class GroupServiceImpl implements GroupService {
                         group.getTravelDate(),
                         group.getCreatedBy(),
                         group.getCreatedAt()
-                ))
-                .toList();
+                ));
 
     }
 }

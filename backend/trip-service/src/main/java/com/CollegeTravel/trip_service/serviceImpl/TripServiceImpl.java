@@ -18,6 +18,11 @@ import com.CollegeTravel.trip_service.service.TripService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -37,6 +42,7 @@ public class TripServiceImpl implements TripService {
     private final TripEventPublisher tripEventPublisher;
     private final ApplicationEventPublisher eventPublisher;
     private static final long WINDOW_HOURS =1;
+    private static final int MATCH_PAGE_SIZE = 20;
     private final GroupLookupClient groupLookupClient;
     private final OutboxEventRepository outboxEventRepository;
     private final ObjectMapper objectMapper;
@@ -45,9 +51,15 @@ public class TripServiceImpl implements TripService {
     @Transactional
     public TripCreationResponse postTrip(Trip trip){
         Trip saved = tripRepository.save(trip);
-        List<MatchedTripResponse> immediateMatches = computeMatches(saved);
+        Pageable immediateMatchPage = PageRequest.of(0, MATCH_PAGE_SIZE, Sort.by(Sort.Direction.DESC, "id"));
+        Page<MatchedTripResponse> immediateMatches = computeMatches(saved, immediateMatchPage);
         if(!immediateMatches.isEmpty()){
-            eventPublisher.publishEvent(new TripMatchedEvent(saved, immediateMatches));
+            for (int pageNumber = 0; pageNumber < immediateMatches.getTotalPages(); pageNumber++) {
+                Page<MatchedTripResponse> notificationPage = pageNumber == 0
+                        ? immediateMatches
+                        : computeMatches(saved, PageRequest.of(pageNumber, MATCH_PAGE_SIZE, Sort.by(Sort.Direction.DESC, "id")));
+                eventPublisher.publishEvent(new TripMatchedEvent(saved, notificationPage.getContent()));
+            }
         }
         try {
             TripCreatedEvent tripCreatedEvent = new TripCreatedEvent(
@@ -62,10 +74,10 @@ public class TripServiceImpl implements TripService {
         } catch (Exception e) {
             throw new RuntimeException("Failed to save event to outbox",e);
         }
-        return new TripCreationResponse(saved, immediateMatches);
+        return new TripCreationResponse(saved, immediateMatches.getContent(), immediateMatches.hasNext());
     }
     @Override
-    public List<MatchedTripResponse> findMatches(Long tripId,Long requestingUserId){
+    public Page<MatchedTripResponse> findMatches(Long tripId,Long requestingUserId, Pageable pageable){
 
 
         Trip trip = tripRepository.findById(tripId).orElseThrow(()->new TripNotFoundException("Trip Not found" + tripId));
@@ -74,7 +86,7 @@ public class TripServiceImpl implements TripService {
             throw  new TripAccessDeniedException("You can only view matches for your own trips");
 
         }
-        return computeMatches(trip);
+        return computeMatches(trip, pageable);
 
 
     }
@@ -86,12 +98,12 @@ public class TripServiceImpl implements TripService {
     }
 
     @Override
-    public List<ExploreTripResponse> getExploreTrips(Long userId) {
-    List<Trip> othersTrips = tripRepository.findByUserIdNot(userId);
+    public Page<ExploreTripResponse> getExploreTrips(Long userId, Pageable pageable) {
+    Page<Trip> othersTrips = tripRepository.findByUserIdNot(userId, pageable);
     if (othersTrips.isEmpty()){
-        return List.of();
+        return othersTrips.map(trip -> new ExploreTripResponse(trip, "Unknown"));
     }
-    List<Long> userIds = othersTrips.stream()
+    List<Long> userIds = othersTrips.getContent().stream()
             .map(Trip::getUserId)
             .distinct()
             .toList();
@@ -105,18 +117,32 @@ public class TripServiceImpl implements TripService {
 
         }
         final Map<Long, String> userNameMap = tempMap;
-        return othersTrips.stream()
+        List<ExploreTripResponse> responses = othersTrips.getContent().stream()
                 .map(trip ->{
                     String name = userNameMap.getOrDefault(trip.getUserId(), "Unknown");
                     return new ExploreTripResponse(trip, name);
 
                 })
                 .toList();
+        return new PageImpl<>(responses, pageable, othersTrips.getTotalElements());
     }
 
     @Override
-    public List<Trip> getMyTrips(Long userId) {
-        return tripRepository.findByUserId(userId);
+    public Page<Trip> getMyTrips(Long userId, Pageable pageable) {
+        return tripRepository.findByUserId(userId, pageable);
+    }
+
+    @Override
+    public ExploreTripResponse getExploreTrip(Long tripId) {
+        Trip trip = tripRepository.findById(tripId)
+                .orElseThrow(() -> new TripNotFoundException("Trip not found: " + tripId));
+        String name = "Unknown";
+        try {
+            List<UserSummaryDTO> users = userServiceClient.getUsersByIds(List.of(trip.getUserId()));
+            if (users != null && !users.isEmpty()) name = users.get(0).name();
+        } catch (Exception ignored) {
+        }
+        return new ExploreTripResponse(trip, name);
     }
 
     @Override
@@ -131,17 +157,17 @@ public class TripServiceImpl implements TripService {
     }
 
 
-    private List<MatchedTripResponse> computeMatches(Trip trip){
+    private Page<MatchedTripResponse> computeMatches(Trip trip, Pageable pageable){
         LocalDateTime windowStart = trip.getTravelDateTime().minusHours(WINDOW_HOURS);
         LocalDateTime windowEnd = trip.getTravelDateTime().plusHours(WINDOW_HOURS);
 
-        List<Trip> matched = tripRepository.findCandidates(
-                trip.getId(), trip.getUserId(), trip.getSourcePoint(), trip.getBoardingStation(), windowStart, windowEnd
+        Page<Trip> matched = tripRepository.findCandidates(
+                trip.getId(), trip.getUserId(), trip.getSourcePoint(), trip.getBoardingStation(), windowStart, windowEnd, pageable
         );
         GroupLookupResult lookupResult = groupLookupClient.findExistingGroup(
                 trip.getSourcePoint(), trip.getBoardingStation(), trip.getTravelDateTime().toLocalDate()
         );
-        List<Long> userIds =  matched.stream().map(Trip::getUserId).toList();
+        List<Long> userIds =  matched.getContent().stream().map(Trip::getUserId).toList();
         Map<Long, String> userNameMap;
         if (!userIds.isEmpty()) {
             List<UserSummaryDTO> users = userServiceClient.getUsersByIds(userIds);
@@ -149,11 +175,12 @@ public class TripServiceImpl implements TripService {
         } else {
             userNameMap = Map.of();
         }
-        return matched.stream()
+        List<MatchedTripResponse> responses = matched.getContent().stream()
                 .map(m -> {
                     String name = userNameMap.getOrDefault(m.getUserId(), "Unknown");
                     return new MatchedTripResponse(m, name, lookupResult.groupId(), lookupResult.available());
                 })
                 .toList();
+        return new PageImpl<>(responses, pageable, matched.getTotalElements());
     }
 }

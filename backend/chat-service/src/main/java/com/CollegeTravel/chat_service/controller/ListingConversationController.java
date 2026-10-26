@@ -11,7 +11,11 @@ import com.CollegeTravel.chat_service.repository.ListingMessageRepository;
 import com.CollegeTravel.chat_service.service.ListingConversationService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
@@ -24,6 +28,7 @@ import java.util.List;
 public class ListingConversationController {
     private static final int DEFAULT_LIMIT = 50;
     private static final int MAX_LIMIT = 100;
+    private static final int MAX_PAGE_SIZE = 100;
 
     private final ListingMessageRepository messageRepository;
     private final MessageCursorCodec cursorCodec;
@@ -102,9 +107,17 @@ public class ListingConversationController {
         );
     }
     @GetMapping("/mine")
-    public List<ListingConversationResponse> getMyConversation(HttpServletRequest request){
+    public Page<ListingConversationResponse> getMyConversation(HttpServletRequest request,
+            @PageableDefault(size = 20, sort = {"startedAt", "id"}, direction = Sort.Direction.DESC) Pageable pageable){
         Long userId = (Long) request.getAttribute("userId");
-        return conversationService.getUserConversation(userId);
+        return conversationService.getUserConversation(userId, bounded(pageable));
+    }
+
+    private Pageable bounded(Pageable pageable) {
+        int pageSize = Math.min(pageable.getPageSize(), MAX_PAGE_SIZE);
+        Sort sort = pageable.getSort();
+        if (sort.getOrderFor("id") == null) sort = sort.and(Sort.by(Sort.Direction.DESC, "id"));
+        return PageRequest.of(pageable.getPageNumber(), pageSize, sort);
     }
 
 }

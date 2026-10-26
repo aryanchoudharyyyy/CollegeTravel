@@ -14,6 +14,9 @@ import com.CollegeTravel.chat_service.repository.ListingMessageRepository;
 import com.CollegeTravel.chat_service.service.ListingConversationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -90,13 +93,14 @@ public class ListingConversationServiceImpl implements ListingConversationServic
     }
 
     @Override
-    public List<ListingConversationResponse> getUserConversation(Long userId) {
+    public Page<ListingConversationResponse> getUserConversation(Long userId, Pageable pageable) {
 
-        List<ListingConversation> list = conversationRepository.findByBuyerIdOrSellerIdOrderByStartedAtDesc(userId, userId);
-        if(list.isEmpty()){
-            return List.of();
+        Page<ListingConversation> conversationPage = conversationRepository.findByBuyerIdOrSellerId(userId, userId, pageable);
+        if(conversationPage.isEmpty()){
+            return Page.empty(pageable);
         }
-        List<Long>  otherUserIds = list.stream()
+        List<ListingConversation> conversations = conversationPage.getContent();
+        List<Long>  otherUserIds = conversations.stream()
                 .map(c -> c.getBuyerId().equals(userId) ? c.getSellerId() : c.getBuyerId())
                 .filter(Objects::nonNull)
                 .distinct()
@@ -114,7 +118,7 @@ public class ListingConversationServiceImpl implements ListingConversationServic
 
         }
 
-        return list.stream().map(c -> {
+        List<ListingConversationResponse> responses = conversations.stream().map(c -> {
             Long otherUserId = c.getBuyerId().equals(userId) ? c.getSellerId() : c.getBuyerId();
             Optional<ListingMessage> lastMsg = messageRepository.findTopByConversationIdOrderBySentAtDesc(c.getId());
            String lastText = lastMsg.map(ListingMessage::getContent).orElse("Chat started");
@@ -132,6 +136,7 @@ public class ListingConversationServiceImpl implements ListingConversationServic
                     lastTime
             );
         }).toList();
+        return new PageImpl<>(responses, pageable, conversationPage.getTotalElements());
 
     }
 }

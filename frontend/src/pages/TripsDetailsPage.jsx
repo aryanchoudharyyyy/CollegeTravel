@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 
 import { useAuth } from "../contexts/AuthContext";
-import { getExploreTrips } from "../api/tripApi";
+import { getTripById } from "../api/tripApi";
 import {
   findExistingGroup,
   getGroupMembers,
@@ -63,25 +63,19 @@ export default function TripDetailsPage() {
     }
 
     setLoading(true);
-    getExploreTrips()
+    getTripById(tripId)
       .then((res) => {
-        const found = res.data.find(
-          (item) => String(item.trip.id) === String(tripId)
-        );
-        if (found) {
-          setTrip({
-            id: found.trip.id,
-            sourcePoint: found.trip.sourcePoint || found.trip.source,
-            boardingStation: found.trip.boardingStation,
-            finalDestination: found.trip.destination || "",
-            travelDate: found.trip.travelDateTime.split("T")[0],
-            travelTime: found.trip.travelDateTime.split("T")[1].substring(0, 5),
-            postedBy: found.postedBy,
-            rawTrip: found.trip,
-          });
-        } else {
-          setError("Trip not found.");
-        }
+        const found = res.data;
+        setTrip({
+          id: found.trip.id,
+          sourcePoint: found.trip.sourcePoint || found.trip.source,
+          boardingStation: found.trip.boardingStation,
+          finalDestination: found.trip.destination || "",
+          travelDate: found.trip.travelDateTime.split("T")[0],
+          travelTime: found.trip.travelDateTime.split("T")[1].substring(0, 5),
+          postedBy: found.postedBy,
+          rawTrip: found.trip,
+        });
       })
       .catch(() => setError("Failed to load trip details."))
       .finally(() => setLoading(false));

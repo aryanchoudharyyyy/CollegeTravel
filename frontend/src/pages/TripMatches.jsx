@@ -48,14 +48,19 @@ function TripMatches() {
   const [matches, setMatches] = useState(
     location.state?.matches || []
   );
+  const [matchesPage, setMatchesPage] = useState(0);
+  const [hasMoreMatches, setHasMoreMatches] = useState(Boolean(location.state?.hasMoreMatches));
+  const [loadingMoreMatches, setLoadingMoreMatches] = useState(false);
   const [openMenuId, setOpenMenuId] = useState(null);
 
   // Fetch fresh matches
   useEffect(() => {
     if (myTrip && myTrip.id) {
-      getTripMatches(myTrip.id)
+      getTripMatches(myTrip.id, 0, 20)
         .then((response) => {
-          setMatches(response.data);
+          setMatches(response.data?.content || []);
+          setMatchesPage(0);
+          setHasMoreMatches(response.data?.last === false);
         })
         .catch((error) => {
           console.log(
@@ -65,6 +70,22 @@ function TripMatches() {
         });
     }
   }, [myTrip]);
+
+  const loadMoreMatches = async () => {
+    if (!myTrip?.id || loadingMoreMatches || !hasMoreMatches) return;
+    const nextPage = matchesPage + 1;
+    setLoadingMoreMatches(true);
+    try {
+      const response = await getTripMatches(myTrip.id, nextPage, 20);
+      setMatches((previous) => [...previous, ...(response.data?.content || [])]);
+      setMatchesPage(nextPage);
+      setHasMoreMatches(response.data?.last === false);
+    } catch (error) {
+      setErrorMessage(error.response?.data?.message || "Failed to load more matches");
+    } finally {
+      setLoadingMoreMatches(false);
+    }
+  };
 
   console.log("MATCHES:", matches);
   console.log("MY TRIP:", myTrip);
@@ -333,6 +354,11 @@ function TripMatches() {
             </div>
           );
         })
+      )}
+      {hasMoreMatches && (
+        <button className="tm-post-trip-btn" onClick={loadMoreMatches} disabled={loadingMoreMatches}>
+          {loadingMoreMatches ? "Loading…" : "Load more matches"}
+        </button>
       )}
     </div>
   );

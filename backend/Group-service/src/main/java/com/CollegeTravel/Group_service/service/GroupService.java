@@ -3,6 +3,8 @@ package com.CollegeTravel.Group_service.service;
 import com.CollegeTravel.Group_service.dto.Response.GroupMembersResponse;
 import com.CollegeTravel.Group_service.dto.Response.GroupResponse;
 import com.CollegeTravel.Group_service.entity.Group;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -14,7 +16,7 @@ public interface GroupService {
 
     Optional<Group> findGroupForTripContext(String sourcePoint,String boardStation,LocalDate travelDate);
     boolean isMember(Long groupId, Long userId);
-    GroupMembersResponse getGroupMembers(Long groupId, Long requestingUserId);
+    GroupMembersResponse getGroupMembers(Long groupId, Long requestingUserId, Pageable pageable);
     void leaveGroup(Long groupId, Long userId);
-    List<GroupResponse> getMyGroups(Long userId);
+    Page<GroupResponse> getMyGroups(Long userId, Pageable pageable);
 }

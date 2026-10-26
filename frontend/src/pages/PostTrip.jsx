@@ -32,7 +32,8 @@ const handleSubmit = async (e) => {
       const myTrip = response.data.myTrip;
       navigate("/trip-matches", {
         state: {
-          matches, myTrip
+          matches, myTrip,
+          hasMoreMatches: response.data.hasMoreImmediateMatches,
         }
       });
       

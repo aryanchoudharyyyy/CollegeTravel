@@ -37,7 +37,7 @@ function formatConvTime(timeStr) {
 
 
 
-function ConversationList({ conversations, selectedConversationId, onSelectConversation }) {
+function ConversationList({ conversations, selectedConversationId, onSelectConversation, onLoadMore, hasMore, loadingMore }) {
   return (
     <div className="chat-group-list">
       <div className="chat-group-list-header">
@@ -72,6 +72,11 @@ function ConversationList({ conversations, selectedConversationId, onSelectConve
           </div>
         )}
       </div>
+      {hasMore && (
+        <button className="btn btn-ghost" onClick={onLoadMore} disabled={loadingMore}>
+          {loadingMore ? "Loading…" : "Load more conversations"}
+        </button>
+      )}
     </div>
   );
 }
@@ -283,6 +288,9 @@ export default function MarketplaceChatsPage() {
   const [mobileShowChat, setMobileShowChat] = useState(false);
   const [conversations, setConversations] = useState([]);
   const [loadingConversations, setLoadingConversations] = useState(true);
+  const [conversationPage, setConversationPage] = useState(0);
+  const [hasMoreConversations, setHasMoreConversations] = useState(false);
+  const [loadingMoreConversations, setLoadingMoreConversations] = useState(false);
   // In this mock setup, current user ID is 102 (from ListingDetail.jsx mockup)
   const currentUserId = user?.id; 
   const userName = user?.name || "You";
@@ -291,11 +299,12 @@ export default function MarketplaceChatsPage() {
   const newListingIdFromUrl = searchParams.get("new_listing");
   const newSellerIdFromUrl = searchParams.get("seller");
 
-  const loadConversations = () => {
-  setLoadingConversations(true);
-  getMyListingConversations()
-  .then(async (res) => {
-    const rawList = res.data || [];
+  const loadConversations = async (page = 0, append = false) => {
+  if (append) setLoadingMoreConversations(true);
+  else setLoadingConversations(true);
+  try {
+    const res = await getMyListingConversations(page, 20);
+    const rawList = res.data?.content || [];
     // Live ticket details (route, seller name, price) fetch karke combine karte hain
     const enrichedList = await Promise.all(
       rawList.map(async (conv) => {
@@ -323,12 +332,15 @@ export default function MarketplaceChatsPage() {
         }
       })
     );
-    setConversations(enrichedList);
-  })
-  .catch((err) => {
+    setConversations((previous) => append ? [...previous, ...enrichedList] : enrichedList);
+    setConversationPage(page);
+    setHasMoreConversations(res.data?.last === false);
+  } catch (err) {
     console.log("Failed to load marketplace conversations:", err);
-  })
-  .finally(() => setLoadingConversations(false));
+  } finally {
+    setLoadingConversations(false);
+    setLoadingMoreConversations(false);
+  }
  };
   
 
@@ -336,6 +348,12 @@ export default function MarketplaceChatsPage() {
     localStorage.removeItem("marketplace_conversations");
     loadConversations();
   }, []);
+
+  const loadMoreConversations = () => {
+    if (!loadingMoreConversations && hasMoreConversations) {
+      loadConversations(conversationPage + 1, true);
+    }
+  };
 
   useEffect(() => {
     const convId = conversationIdFromUrl ? parseInt(conversationIdFromUrl) : null;
@@ -431,6 +449,9 @@ export default function MarketplaceChatsPage() {
             conversations={conversations}
             selectedConversationId={selectedConversation?.conversationId}
             onSelectConversation={handleSelectConversation}
+            onLoadMore={loadMoreConversations}
+            hasMore={hasMoreConversations}
+            loadingMore={loadingMoreConversations}
           />
         </div>
 

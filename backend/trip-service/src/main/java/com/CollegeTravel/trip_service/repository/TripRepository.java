@@ -1,6 +1,8 @@
 package com.CollegeTravel.trip_service.repository;
 
 import com.CollegeTravel.trip_service.entity.Trip;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -20,13 +22,14 @@ public interface TripRepository extends JpaRepository<Trip,Long> {
            AND LOWER(TRIM(t.boardingStation)) = LOWER(TRIM(:boardingStation))
            AND t.travelDateTime BETWEEN :windowStart AND :windowEnd
            """)
-    List<Trip> findCandidates(
+    Page<Trip> findCandidates(
             @Param("tripId") Long tripId,
             @Param("userId") Long userId,
             @Param("sourcePoint") String sourcePoint,
             @Param("boardingStation") String boardingStation,
             @Param("windowStart") LocalDateTime windowStart,
-            @Param("windowEnd") LocalDateTime windowEnd
+            @Param("windowEnd") LocalDateTime windowEnd,
+            Pageable pageable
           );
     @Query("SELECT CASE WHEN COUNT(t)>0 THEN true ELSE false END FROM Trip t " +
             "WHERE t.userId = :userId " +
@@ -41,6 +44,6 @@ public interface TripRepository extends JpaRepository<Trip,Long> {
             @Param("dayStart") LocalDateTime dayStart,
             @Param("dayEnd") LocalDateTime dayEnd
     );
-    List<Trip> findByUserIdNot(Long userId);
-    List<Trip> findByUserId(Long userId);
+    Page<Trip> findByUserIdNot(Long userId, Pageable pageable);
+    Page<Trip> findByUserId(Long userId, Pageable pageable);
 }

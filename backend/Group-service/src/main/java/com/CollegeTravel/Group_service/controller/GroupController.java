@@ -9,6 +9,11 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.ws.rs.Path;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -19,6 +24,7 @@ import java.util.Optional;
 @RequestMapping("/api/groups")
 @RequiredArgsConstructor
 public class GroupController {
+    private static final int MAX_PAGE_SIZE = 100;
     private final GroupService groupService;
 
     @PostMapping
@@ -48,9 +54,10 @@ public class GroupController {
 
     }
     @GetMapping("/{groupId}/members")
-    public GroupMembersResponse getMembers(@PathVariable Long groupId, HttpServletRequest request){
+    public GroupMembersResponse getMembers(@PathVariable Long groupId, HttpServletRequest request,
+            @PageableDefault(size = 20, sort = "id", direction = Sort.Direction.ASC) Pageable pageable){
         Long userId = (Long) request.getAttribute("userId");
-        return groupService.getGroupMembers(groupId,userId);
+        return groupService.getGroupMembers(groupId, userId, bounded(pageable));
     }
     @PostMapping("/{groupId}/leave")
     public  String leaveGroup(@PathVariable Long groupId, HttpServletRequest request){
@@ -59,8 +66,16 @@ public class GroupController {
         return "Left group successfully";
     }
     @GetMapping("/user")
-    public ResponseEntity<List<GroupResponse>> getMyGroups(HttpServletRequest request){
+    public Page<GroupResponse> getMyGroups(HttpServletRequest request,
+            @PageableDefault(size = 20, sort = "id", direction = Sort.Direction.DESC) Pageable pageable){
         Long userId = (Long) request.getAttribute("userId");
-        return ResponseEntity.ok(groupService.getMyGroups(userId));
+        return groupService.getMyGroups(userId, bounded(pageable));
+    }
+
+    private Pageable bounded(Pageable pageable) {
+        int pageSize = Math.min(pageable.getPageSize(), MAX_PAGE_SIZE);
+        Sort sort = pageable.getSort();
+        if (sort.getOrderFor("id") == null) sort = sort.and(Sort.by(Sort.Direction.DESC, "id"));
+        return PageRequest.of(pageable.getPageNumber(), pageSize, sort);
     }
 }
