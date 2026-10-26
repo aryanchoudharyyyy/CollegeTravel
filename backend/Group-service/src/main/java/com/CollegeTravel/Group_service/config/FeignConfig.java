@@ -3,6 +3,7 @@ package com.CollegeTravel.Group_service.config;
 
 import feign.RequestInterceptor;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.context.request.RequestContextHolder;
@@ -10,6 +11,8 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 
 @Configuration
 public class FeignConfig {
+    @Value("${internal.api-key}")
+    private String internalApiKey;
 
     @Bean
     public RequestInterceptor requestInterceptor() {
@@ -22,6 +25,7 @@ public class FeignConfig {
                     requestTemplate.header("Authorization", authHeader);
                 }
             }
+            requestTemplate.header("X-Internal-Api-Key", internalApiKey);
         };
     }
 }

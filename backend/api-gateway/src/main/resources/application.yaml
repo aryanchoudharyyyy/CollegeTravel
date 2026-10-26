@@ -26,6 +26,11 @@ spring:
               uri: lb://GROUP-SERVICE
               predicates:
                 - Path=/api/groups/**
+            - id: chat-websocket-route
+              uri: lb:ws://CHAT-SERVICE
+              predicates:
+                - Path=/api/chat/ws
+                - Header=Upgrade, websocket
             - id: chat-service-route
               uri: lb://CHAT-SERVICE
               predicates:
