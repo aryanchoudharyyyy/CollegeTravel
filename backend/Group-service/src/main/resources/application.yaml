@@ -15,10 +15,10 @@ management:
   endpoints:
     web:
       exposure:
-        include: health, circuitbreakers, circuitbreakerevents, retries
+        include: health
   endpoint:
     health:
-      show-details: always
+      show-details: never
   health:
     circuitbreakers:
       enabled: true

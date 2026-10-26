@@ -130,3 +130,9 @@ pnpm-debug.log*
 
 # ESLint cache
 .eslintcache
+# Local PostgreSQL backup archives (database contents must not be committed)
+*.dump
+*.dump.*
+
+# Local Docker Compose backup copy
+backend/docker-compose.yml.before-postgres-fix.bak

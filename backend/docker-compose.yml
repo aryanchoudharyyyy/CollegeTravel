@@ -2,9 +2,11 @@ services:
   postgres-db:
     image: postgres:15
     restart: unless-stopped
+    ports:
+      - "5432:5432"
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:?Set POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+      POSTGRES_USER: ${DB_USERNAME:?Set DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD}
     volumes:
       - postgres-data:/var/lib/postgresql/data
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
@@ -31,19 +33,32 @@ services:
       context: ./ConfigServer
     restart: unless-stopped
     environment:
+      SERVER_ADDRESS: "0.0.0.0"
       CONFIG_SERVER_USERNAME: ${CONFIG_SERVER_USERNAME:?Set CONFIG_SERVER_USERNAME}
       CONFIG_SERVER_PASSWORD: ${CONFIG_SERVER_PASSWORD:?Set CONFIG_SERVER_PASSWORD}
       CONFIG_REPO_USERNAME: ${CONFIG_REPO_USERNAME:?Set CONFIG_REPO_USERNAME}
       CONFIG_REPO_PASSWORD: ${CONFIG_REPO_PASSWORD:?Set CONFIG_REPO_PASSWORD}
-    expose:
-      - "8888"
+    ports:
+      - "8888:8888"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://$${CONFIG_SERVER_USERNAME}:$${CONFIG_SERVER_PASSWORD}@127.0.0.1:8888/trip-service/default || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
 
   eureka-server:
     build:
       context: ./EurekaService
     restart: unless-stopped
-    expose:
-      - "8761"
+    ports:
+      - "8761:8761"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:8761/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
 
   api-gateway:
     build:
@@ -55,7 +70,8 @@ services:
     ports:
       - "8080:8080"
     depends_on:
-      - eureka-server
+      eureka-server:
+        condition: service_healthy
 
   user-service:
     build:
@@ -70,8 +86,8 @@ services:
       FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:?Set FRONTEND_ORIGIN}
       EUREKA_URL: http://eureka-server:8761/eureka/
       DB_HOST: postgres-db
-      DB_USERNAME: ${POSTGRES_USER:?Set POSTGRES_USER}
-      DB_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+      DB_USERNAME: ${DB_USERNAME:?Set DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD}
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET}
       INTERNAL_API_KEY: ${INTERNAL_API_KEY:?Set INTERNAL_API_KEY}
       MAIL_HOST: ${MAIL_HOST:?Set MAIL_HOST}
@@ -85,9 +101,9 @@ services:
       postgres-db:
         condition: service_healthy
       config-server:
-        condition: service_started
+        condition: service_healthy
       eureka-server:
-        condition: service_started
+        condition: service_healthy
 
   trip-service:
     build:
@@ -101,8 +117,8 @@ services:
       SPRING_CLOUD_CONFIG_PASSWORD: ${CONFIG_SERVER_PASSWORD:?Set CONFIG_SERVER_PASSWORD}
       EUREKA_URL: http://eureka-server:8761/eureka/
       DB_HOST: postgres-db
-      DB_USERNAME: ${POSTGRES_USER:?Set POSTGRES_USER}
-      DB_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+      DB_USERNAME: ${DB_USERNAME:?Set DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD}
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET}
       INTERNAL_API_KEY: ${INTERNAL_API_KEY:?Set INTERNAL_API_KEY}
       RABBITMQ_HOST: rabbitmq
@@ -121,9 +137,9 @@ services:
       rabbitmq:
         condition: service_healthy
       config-server:
-        condition: service_started
+        condition: service_healthy
       eureka-server:
-        condition: service_started
+        condition: service_healthy
 
   group-service:
     build:
@@ -137,8 +153,8 @@ services:
       SPRING_CLOUD_CONFIG_PASSWORD: ${CONFIG_SERVER_PASSWORD:?Set CONFIG_SERVER_PASSWORD}
       EUREKA_URL: http://eureka-server:8761/eureka/
       DB_HOST: postgres-db
-      DB_USERNAME: ${POSTGRES_USER:?Set POSTGRES_USER}
-      DB_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+      DB_USERNAME: ${DB_USERNAME:?Set DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD}
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET}
       INTERNAL_API_KEY: ${INTERNAL_API_KEY:?Set INTERNAL_API_KEY}
       RABBITMQ_HOST: rabbitmq
@@ -153,9 +169,9 @@ services:
       rabbitmq:
         condition: service_healthy
       config-server:
-        condition: service_started
+        condition: service_healthy
       eureka-server:
-        condition: service_started
+        condition: service_healthy
 
   chat-service:
     build:
@@ -169,8 +185,8 @@ services:
       SPRING_CLOUD_CONFIG_PASSWORD: ${CONFIG_SERVER_PASSWORD:?Set CONFIG_SERVER_PASSWORD}
       EUREKA_URL: http://eureka-server:8761/eureka/
       DB_HOST: postgres-db
-      DB_USERNAME: ${POSTGRES_USER:?Set POSTGRES_USER}
-      DB_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+      DB_USERNAME: ${DB_USERNAME:?Set DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD}
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET}
       INTERNAL_API_KEY: ${INTERNAL_API_KEY:?Set INTERNAL_API_KEY}
       JPA_SHOW_SQL: "false"
@@ -179,9 +195,9 @@ services:
       postgres-db:
         condition: service_healthy
       config-server:
-        condition: service_started
+        condition: service_healthy
       eureka-server:
-        condition: service_started
+        condition: service_healthy
 
   marketplace-service:
     build:
@@ -195,8 +211,8 @@ services:
       SPRING_CLOUD_CONFIG_PASSWORD: ${CONFIG_SERVER_PASSWORD:?Set CONFIG_SERVER_PASSWORD}
       EUREKA_URL: http://eureka-server:8761/eureka/
       DB_HOST: postgres-db
-      DB_USERNAME: ${POSTGRES_USER:?Set POSTGRES_USER}
-      DB_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+      DB_USERNAME: ${DB_USERNAME:?Set DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD}
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET}
       INTERNAL_API_KEY: ${INTERNAL_API_KEY:?Set INTERNAL_API_KEY}
       JPA_SHOW_SQL: "false"
@@ -205,9 +221,9 @@ services:
       postgres-db:
         condition: service_healthy
       config-server:
-        condition: service_started
+        condition: service_healthy
       eureka-server:
-        condition: service_started
+        condition: service_healthy
 
 volumes:
   postgres-data:

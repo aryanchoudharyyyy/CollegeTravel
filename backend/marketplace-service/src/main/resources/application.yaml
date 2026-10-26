@@ -9,15 +9,15 @@ spring:
       password: ${CONFIG_SERVER_PASSWORD}
 server:
   port: 8086
-
+#, circuitbreakers, circuitbreakerevents, retries
 management:
   endpoints:
     web:
       exposure:
-        include: health, circuitbreakers, circuitbreakerevents, retries
+        include: health
   endpoint:
     health:
-      show-details: always
+      show-details: never
   health:
     circuitbreakers:
       enabled: true
