@@ -1,12 +1,18 @@
 import { useEffect, useState, useRef } from "react";
 import { useSearchParams, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
+import { useChatNotifications } from "../contexts/ChatNotificationContext";
 import ChatComposer from "./ChatComposer";
-import { connectMarketplaceWebsocket, 
+import {
+  connectMarketplaceWebsocket,
   sendMarketplaceMessage,
-  disconnectMarketplaceWebSocket
- } from "../services/marketPlaceWebsocket";
- import { getListingChatHistory, getMyListingConversations, getListingById } from "../api/marketplaceApi";
+  disconnectMarketplaceWebSocket,
+} from "../services/marketPlaceWebsocket";
+import {
+  getListingChatHistory,
+  getMyListingConversations,
+  getListingById,
+} from "../api/marketplaceApi";
 import {
   ArrowLeft,
   Send,
@@ -20,24 +26,30 @@ import {
 } from "lucide-react";
 import "../styles/ChatsPage.css"; // Reusing the same CSS to maintain identical theme
 
-function formatConvTime(timeStr) {
-  if(!timeStr) return "";
+function formatTime(isoStr) {
+  if (!isoStr) return "";
   try {
-    const d = new Date(timeStr);
-    const diffMs = Date.now() - d.getTime();
-    const diffHours = Math.floor(diffMs / (1000 * 60 *60));
-     if (diffHours < 1) return "Just now";
-    if (diffHours < 24) return `${diffHours}h ago`;
+    const d = new Date(isoStr);
+    if (isNaN(d.getTime())) return "";
+    const now = new Date();
+    if (d.toDateString() === now.toDateString()) {
+      return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    }
     return d.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
-  } catch  {
-   return timeStr; 
+  } catch {
+    return "";
   }
-
 }
 
-
-
-function ConversationList({ conversations, selectedConversationId, onSelectConversation, onLoadMore, hasMore, loadingMore }) {
+function ConversationList({
+  conversations,
+  selectedConversationId,
+  onSelectConversation,
+  onLoadMore,
+  hasMore,
+  loadingMore,
+  unreadCounts = {},
+}) {
   return (
     <div className="chat-group-list">
       <div className="chat-group-list-header">
@@ -46,23 +58,42 @@ function ConversationList({ conversations, selectedConversationId, onSelectConve
       </div>
 
       <div className="chat-group-items">
-        {conversations.map((conv) => (
-          <div
-            key={conv.conversationId}
-            className={`chat-group-item ${
-              selectedConversationId === conv.conversationId ? "active" : ""
-            }`}
-            onClick={() => onSelectConversation(conv)}
-          >
-            <div className="chat-group-icon">
-              <Store size={20} />
+        {conversations.map((conv) => {
+          const unread = unreadCounts[conv.conversationId] || 0;
+          const displayTitle = conv.listingTitle || conv.otherUserName;
+          const displayTime = formatTime(conv.lastMessageTime);
+
+          return (
+            <div
+              key={conv.conversationId}
+              className={`chat-group-item ${
+                selectedConversationId === conv.conversationId ? "active" : ""
+              }`}
+              onClick={() => onSelectConversation(conv)}
+            >
+              <div className="chat-group-icon">
+                <Store size={20} />
+              </div>
+              <div className="chat-group-info">
+                <h3
+                  className={`chat-group-route ${unread > 0 ? "unread-title" : ""}`}
+                  title={displayTitle}
+                >
+                  {displayTitle}
+                </h3>
+                <p className={`chat-group-preview ${unread > 0 ? "chat-unread-text" : ""}`}>
+                  {conv.lastMessage || "Chat started"}
+                </p>
+              </div>
+              <div className="chat-group-meta">
+                <span className="chat-group-time">{displayTime}</span>
+                {unread > 0 && (
+                  <span className="whatsapp-unread-badge">{unread}</span>
+                )}
+              </div>
             </div>
-            <div className="chat-group-info">
-              <h3 className="chat-group-route">{conv.otherUserName}</h3>
-              <p className="chat-group-preview">{conv.lastMessage}</p>
-            </div>
-          </div>
-        ))}
+          );
+        })}
 
         {conversations.length === 0 && (
           <div className="chat-empty-groups">
@@ -148,7 +179,7 @@ function ChatArea({ conversation, messages, connectionStatus, onSendMessage, use
     if (chatContainerRef.current) {
       chatContainerRef.current.scrollTo({
         top: chatContainerRef.current.scrollHeight,
-        behavior: "smooth"
+        behavior: "smooth",
       });
     }
   }, [messages]);
@@ -195,7 +226,7 @@ function ChatArea({ conversation, messages, connectionStatus, onSendMessage, use
               />
               <span>{connected ? "Connected" : "Connecting..."}</span>
             </div>
-                        {conversation.listingTitle && (
+            {conversation.listingTitle && (
               <>
                 <span>|</span>
                 <span>{conversation.listingTitle}</span>
@@ -214,7 +245,7 @@ function ChatArea({ conversation, messages, connectionStatus, onSendMessage, use
       </div>
 
       <div className="chat-messages-area" ref={chatContainerRef}>
-               <div className="chat-intro-block">
+        <div className="chat-intro-block">
           <h3 className="chat-intro-block-title">
             {conversation.listingTitle || `Ticket #${conversation.listingId}`}
           </h3>
@@ -232,7 +263,7 @@ function ChatArea({ conversation, messages, connectionStatus, onSendMessage, use
         {messages.map((msg, idx) => {
           const prevMsg = messages[idx - 1];
           const isGrouped = prevMsg && prevMsg.senderId === msg.senderId;
-          const isOwn = msg.senderId === currentUserId; 
+          const isOwn = msg.senderId === currentUserId;
 
           return (
             <MessageBubble
@@ -250,10 +281,10 @@ function ChatArea({ conversation, messages, connectionStatus, onSendMessage, use
       </div>
 
       <ChatComposer
-  placeholder={`Message ${conversation.otherUserName}...`}
-  connected={connected}
-  onSendMessage={onSendMessage}
-/>
+        placeholder={`Message ${conversation.otherUserName}...`}
+        connected={connected}
+        onSendMessage={onSendMessage}
+      />
     </div>
   );
 }
@@ -279,6 +310,12 @@ function EmptyState() {
 
 export default function MarketplaceChatsPage() {
   const { user } = useAuth();
+  const {
+    marketplaceUnreadCounts,
+    markMarketplaceAsRead,
+    handleIncomingMarketplaceMessage,
+    setActiveMarketplaceConvId,
+  } = useChatNotifications();
   const [searchParams] = useSearchParams();
   const location = useLocation();
 
@@ -291,63 +328,70 @@ export default function MarketplaceChatsPage() {
   const [conversationPage, setConversationPage] = useState(0);
   const [hasMoreConversations, setHasMoreConversations] = useState(false);
   const [loadingMoreConversations, setLoadingMoreConversations] = useState(false);
-  // In this mock setup, current user ID is 102 (from ListingDetail.jsx mockup)
-  const currentUserId = user?.id; 
+
+  const currentUserId = user?.id;
   const userName = user?.name || "You";
 
   const conversationIdFromUrl = searchParams.get("conversation");
-  const newListingIdFromUrl = searchParams.get("new_listing");
-  const newSellerIdFromUrl = searchParams.get("seller");
 
   const loadConversations = async (page = 0, append = false) => {
-  if (append) setLoadingMoreConversations(true);
-  else setLoadingConversations(true);
-  try {
-    const res = await getMyListingConversations(page, 20);
-    const rawList = res.data?.content || [];
-    // Live ticket details (route, seller name, price) fetch karke combine karte hain
-    const enrichedList = await Promise.all(
-      rawList.map(async (conv) => {
-        if (!conv.listingId) return conv;
-        try {
-          const listingRes = await getListingById(conv.listingId);
-          const listing = listingRes.data;
-          const route = listing.source && listing.destination 
-            ? `${listing.source} → ${listing.destination}` 
-            : listing.description;
-          const isOtherSeller = conv.otherUserId === listing.postedByUserId;
-          const realName = (isOtherSeller && listing.postedByUserName) 
-            ? listing.postedByUserName 
-            : conv.otherUserName;
+    if (append) setLoadingMoreConversations(true);
+    else setLoadingConversations(true);
+    try {
+      const res = await getMyListingConversations(page, 20);
+      const rawList = res.data?.content || [];
+      // Live ticket details (route, seller name, price) fetch karke combine karte hain
+      const enrichedList = await Promise.all(
+        rawList.map(async (conv) => {
+          if (!conv.listingId) return conv;
+          try {
+            const listingRes = await getListingById(conv.listingId);
+            const listing = listingRes.data;
+            const route =
+              listing.source && listing.destination
+                ? `${listing.source} → ${listing.destination}`
+                : listing.description;
+            const isOtherSeller = conv.otherUserId === listing.postedByUserId;
+            const realName =
+              isOtherSeller && listing.postedByUserName
+                ? listing.postedByUserName
+                : conv.otherUserName;
 
-          return {
-            ...conv,
-            listingTitle: route || `Ticket #${conv.listingId}`,
-            otherUserName: realName && !realName.startsWith("User #") ? realName : conv.otherUserName,
-            price: listing.price,
-            ticketClass: listing.ticketClass,
-          };
-        } catch {
-          return conv;
-        }
-      })
-    );
-    setConversations((previous) => append ? [...previous, ...enrichedList] : enrichedList);
-    setConversationPage(page);
-    setHasMoreConversations(res.data?.last === false);
-  } catch (err) {
-    console.log("Failed to load marketplace conversations:", err);
-  } finally {
-    setLoadingConversations(false);
-    setLoadingMoreConversations(false);
-  }
- };
-  
+            return {
+              ...conv,
+              listingTitle: route || `Ticket #${conv.listingId}`,
+              otherUserName:
+                realName && !realName.startsWith("User #") ? realName : conv.otherUserName,
+              price: listing.price,
+              ticketClass: listing.ticketClass,
+            };
+          } catch {
+            return {
+              ...conv,
+              listingTitle: conv.listingId ? `Ticket #${conv.listingId}` : conv.otherUserName,
+            };
+          }
+        })
+      );
+      setConversations((previous) => (append ? [...previous, ...enrichedList] : enrichedList));
+      setConversationPage(page);
+      setHasMoreConversations(res.data?.last === false);
+    } catch (err) {
+      console.log("Failed to load marketplace conversations:", err);
+    } finally {
+      setLoadingConversations(false);
+      setLoadingMoreConversations(false);
+    }
+  };
 
   useEffect(() => {
     localStorage.removeItem("marketplace_conversations");
     loadConversations();
   }, []);
+
+  useEffect(() => {
+    return () => setActiveMarketplaceConvId(null);
+  }, [setActiveMarketplaceConvId]);
 
   const loadMoreConversations = () => {
     if (!loadingMoreConversations && hasMoreConversations) {
@@ -358,26 +402,27 @@ export default function MarketplaceChatsPage() {
   useEffect(() => {
     const convId = conversationIdFromUrl ? parseInt(conversationIdFromUrl) : null;
     if (convId) {
-      const existing = conversations.find(
-        (c) => c.conversationId === convId);
-        if(existing) setSelectedConversation(existing);
-        else{
-          const stateData = location.state || {};
-          const newConv = {
-            conversationId: convId,
+      const existing = conversations.find((c) => c.conversationId === convId);
+      if (existing) {
+        setSelectedConversation(existing);
+        markMarketplaceAsRead(existing.conversationId);
+      } else {
+        const stateData = location.state || {};
+        const newConv = {
+          conversationId: convId,
           listingId: stateData.listingId || null,
           listingTitle: stateData.listingTitle || `Ticket #${convId}`,
           otherUserId: stateData.otherUserId || null,
           otherUserName: stateData.otherUserName || "Seller",
           lastMessage: "Chat started",
           lastMessageTime: new Date().toISOString(),
-          };
-          
+        };
         setSelectedConversation(newConv);
-        }
-        setMobileShowChat(true);
+        markMarketplaceAsRead(convId);
+      }
+      setMobileShowChat(true);
     }
-  }, [conversationIdFromUrl, conversations, location.state]);
+  }, [conversationIdFromUrl, conversations, location.state, markMarketplaceAsRead]);
 
   useEffect(() => {
     if (!selectedConversation?.conversationId) {
@@ -385,6 +430,9 @@ export default function MarketplaceChatsPage() {
       setConnectionStatus("disconnected");
       return;
     }
+
+    markMarketplaceAsRead(selectedConversation.conversationId);
+
     // 1. Fetch persistent history from chat-service database
     getListingChatHistory(selectedConversation.conversationId)
       .then((res) => {
@@ -395,8 +443,7 @@ export default function MarketplaceChatsPage() {
         console.error("Failed to load message history:", err);
       });
 
-
-      // 2. Connect WebSocket and subscribe to conversation topic
+    // 2. Connect WebSocket and subscribe to conversation topic
     connectMarketplaceWebsocket(
       selectedConversation.conversationId,
       (receivedMessage) => {
@@ -404,14 +451,20 @@ export default function MarketplaceChatsPage() {
           if (prev.some((m) => m.id === receivedMessage.id)) return prev;
           return [...prev, receivedMessage];
         });
-        
-   setConversations((prev) => 
-     prev.map((c) =>
-       c.conversationId === selectedConversation.conversationId
-         ? { ...c, lastMessage: receivedMessage.content, lastMessageTime: new Date().toISOString() }
-         : c
-     )
-   );
+
+        setConversations((prev) =>
+          prev.map((c) =>
+            c.conversationId === selectedConversation.conversationId
+              ? {
+                  ...c,
+                  lastMessage: receivedMessage.content,
+                  lastMessageTime: receivedMessage.sentAt || new Date().toISOString(),
+                }
+              : c
+          )
+        );
+
+        handleIncomingMarketplaceMessage(selectedConversation.conversationId, receivedMessage);
       },
       (status) => {
         setConnectionStatus(status);
@@ -421,17 +474,16 @@ export default function MarketplaceChatsPage() {
     return () => {
       disconnectMarketplaceWebSocket();
     };
-  }, [selectedConversation?.conversationId]);
-
- 
+  }, [selectedConversation?.conversationId, markMarketplaceAsRead, handleIncomingMarketplaceMessage]);
 
   const handleSelectConversation = (conv) => {
     setSelectedConversation(conv);
     setMobileShowChat(true);
+    markMarketplaceAsRead(conv.conversationId);
   };
 
   const handleSendMessage = (content) => {
-    if(!content.trim() || !selectedConversation) return;
+    if (!content.trim() || !selectedConversation) return;
     sendMarketplaceMessage(selectedConversation.conversationId, content);
   };
 
@@ -441,9 +493,7 @@ export default function MarketplaceChatsPage() {
 
   return (
     <div className="chats-page">
-      <div
-        className={`chats-layout ${mobileShowChat ? "mobile-show-chat" : ""}`}
-      >
+      <div className={`chats-layout ${mobileShowChat ? "mobile-show-chat" : ""}`}>
         <div className="chats-left-panel">
           <ConversationList
             conversations={conversations}
@@ -452,6 +502,7 @@ export default function MarketplaceChatsPage() {
             onLoadMore={loadMoreConversations}
             hasMore={hasMoreConversations}
             loadingMore={loadingMoreConversations}
+            unreadCounts={marketplaceUnreadCounts}
           />
         </div>
 

@@ -5,7 +5,7 @@ import "../styles/Navbar.css";
 import { useState, useEffect, useRef } from "react";
 import { getRefreshToken, clearTokens } from "../utils/token";
 import { logout } from "../api/authApi";
-
+import { useChatNotifications } from "../contexts/ChatNotificationContext";
 
 
 function Navbar(){
@@ -13,6 +13,7 @@ function Navbar(){
     const navigate = useNavigate();
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const dropdownRef = useRef(null);
+    const {totalUnreadCount, totalMarketplaceUnread} = useChatNotifications();
     const getInitials = (name) =>{
         if(!name) return "";
         return name.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0,2);
@@ -53,12 +54,24 @@ async function handleLogout(){
             <button className="nav-link" onClick={()=> navigate("/trips")}>
                 Trips
             </button>
-             <button className="nav-link" onClick={()=> navigate("/chats")}>
+             <button className="nav-link nav-link-chat" onClick={()=> navigate("/chats")}>
                 Chats
+                {totalUnreadCount > 0 && (
+                    <span className="navbar-badge">
+                        {totalUnreadCount > 99 ? "99+" : totalUnreadCount}
+                    </span>
+                )}
             </button>
             <button className="nav-link" onClick={()=>
                 navigate("/marketplace")}>Marketplace</button>
-            <button className="nav-link" onClick={()=> navigate("/marketplace/chats")}>Marketplace Chats</button>
+            <button className="nav-link nav-link-chat" onClick={()=> navigate("/marketplace/chats")}>
+                Marketplace Chats
+                {totalMarketplaceUnread > 0 && (
+                    <span className="navbar-badge">
+                        {totalMarketplaceUnread > 99 ? "99+" : totalMarketplaceUnread}
+                    </span>
+                )}
+            </button>
             <button className="nav-link" onClick={()=> navigate("/my-listings")}>My Listings</button>
             </div>
            <div className="nav-profile-container" ref={dropdownRef}>

@@ -8,6 +8,7 @@ import {
 import { useAuth } from "../contexts/AuthContext";
 import ChatComposer from "./ChatComposer";
 import { getMyGroups } from "../api/groupApi";
+import { useChatNotifications } from "../contexts/ChatNotificationContext";
 import { getGroupChatHistory } from "../api/chatApi";
 import {
   MessageCircle,
@@ -36,7 +37,16 @@ const fmtDate = (d) => {
 // ---------------------------------------------------------
 // COMPONENT: Group List (Left Panel)
 // ---------------------------------------------------------
-function GroupList({ groups, selectedGroupId, onSelectGroup, onLoadMore, hasMore, loadingMore }) {
+function formatTime(isoStr) {
+  if (!isoStr) return "";
+  const d = new Date(isoStr);
+  const now = new Date();
+  if (d.toDateString() === now.toDateString()) {
+    return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  }
+  return d.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+}
+function GroupList({ groups, selectedGroupId, onSelectGroup, onLoadMore, hasMore, loadingMore, lastMessages = {}, unreadCounts = {} }) {
   return (
     <div className="chat-group-list">
       <div className="chat-group-list-header">
@@ -45,7 +55,13 @@ function GroupList({ groups, selectedGroupId, onSelectGroup, onLoadMore, hasMore
       </div>
 
       <div className="chat-group-items">
-        {groups.map((group) => (
+        {groups.map((group) => {
+          const lastMsg = lastMessages[group.groupId];
+          const unread = unreadCounts[group.groupId] || 0;
+          const displayMessage =lastMsg ? `${lastMsg.senderName ? `${lastMsg.senderName}: ` : ""}${lastMsg.content}`
+           : "Tap to chat";
+           const displayTime = lastMsg ? formatTime(lastMsg.sendAt) : "";
+           return (
           <div
             key={group.groupId}
             className={`chat-group-item ${
@@ -58,17 +74,28 @@ function GroupList({ groups, selectedGroupId, onSelectGroup, onLoadMore, hasMore
             </div>
             <div className="chat-group-info">
               <h3 className="chat-group-route">{group.route}</h3>
-              <p className="chat-group-preview">{group.lastMessage}</p>
+              
+              <p className= {`chat-group-preview ${unread > 0 ? "chat-unread-text" : ""}`}>
+                {displayMessage}
+              </p>
             </div>
             <div className="chat-group-meta">
-              <span className="chat-group-time">{group.lastMessageTime}</span>
-              <span className="chat-group-members">
+              <span className="chat-group-time">{displayTime}</span>
+              {unread>0 ? (
+                <span className="whatsapp-unread-badge">
+                  {unread}
+                </span>
+              ) :(
+<span className="chat-group-members">
                 <Users size={12} />
                 {group.members}
               </span>
+              )}
+              
             </div>
           </div>
-        ))}
+        );
+})}
 
         {groups.length === 0 && (
           <div className="chat-empty-groups">
@@ -314,6 +341,7 @@ export default function ChatsPage() {
   const [messages, setMessages] = useState([]);
   const [connectionStatus, setConnectionStatus] = useState("disconnected");
   const [mobileShowChat, setMobileShowChat] = useState(false);
+  const { lastMessages, unreadCounts, markAsRead, handleIncomingMessage, setActiveGroupId } = useChatNotifications();
 
   const userName = user?.name || "You";
 
@@ -390,6 +418,7 @@ export default function ChatsPage() {
       setConnectionStatus("disconnected");
       return;
     }
+    markAsRead(selectedGroup.groupId);
     // load message history from our new chatapi.js
     getGroupChatHistory(selectedGroup.groupId)
     .then((res) => {
@@ -405,6 +434,7 @@ export default function ChatsPage() {
       selectedGroup.groupId,
       (receivedMessage) => {
         setMessages((prev) => [...prev, receivedMessage]);
+        handleIncomingMessage(selectedGroup.groupId, receivedMessage);
       },
       (status) => {
         setConnectionStatus(status);
@@ -419,7 +449,11 @@ export default function ChatsPage() {
   const handleSelectGroup = (group) => {
     setSelectedGroup(group);
     setMobileShowChat(true);
+     markAsRead(group.groupId); 
   };
+  useEffect(() => {
+  return () => setActiveGroupId(null);
+}, []);
 
   const handleSendMessage = (content) => {
     wsSendMessage(selectedGroup.groupId, content, userName);
@@ -443,6 +477,8 @@ export default function ChatsPage() {
           onLoadMore={loadMoreGroups}
           hasMore={hasMoreGroups}
           loadingMore={loadingMoreGroups}
+          lastMessages={lastMessages}
+          unreadCounts={unreadCounts}
           />
         </div>
 

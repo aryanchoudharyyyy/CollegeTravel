@@ -26,10 +26,10 @@ export function AuthProvider({ children }){
             {children}
         </AuthContext.Provider>
     );
-}
+};
 
 // 3. Create a Custom Hook (A quick way to turn on the tap)
 
 export function useAuth(){
     return useContext(AuthContext);
-}
+};

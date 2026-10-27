@@ -195,3 +195,31 @@
     display: none;
   }
 }
+.nav-link-chat {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.navbar-badge {
+  position: absolute;
+  top: -4px;
+  right: -8px;
+  background-color: #ef4444; /* Instagram-like red notification badge */
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
+  min-width: 18px;
+  height: 18px;
+  line-height: 18px;
+  padding: 0 4px;
+  border-radius: 9999px;
+  text-align: center;
+  box-shadow: 0 0 0 2px #ffffff;
+  animation: badgePop 0.2s ease-out;
+}
+
+@keyframes badgePop {
+  0% { transform: scale(0.6); }
+  100% { transform: scale(1); }
+}

@@ -116,6 +116,11 @@
   text-overflow: ellipsis;
 }
 
+.chat-group-route.unread-title {
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
 .chat-group-preview {
   font-size: 13px;
   color: var(--text-secondary);
@@ -124,6 +129,10 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+.chat-group-preview.chat-unread-text {
+  font-weight: 600;
+  color: var(--text-primary);
 }
 
 .chat-group-meta {
@@ -795,6 +804,21 @@
   color: var(--text-secondary);
 
   margin: 0 0 var(--space-6) 0;
+}
+.whatsapp-unread-badge {
+  background-color: var(--accent-600);
+  color: var(--text-inverse, #ffffff);
+  font-size: 11px;
+  font-weight: 700;
+  min-width: 20px;
+  height: 20px;
+  line-height: 20px;
+  border-radius: 10px;
+  text-align: center;
+  padding: 0 5px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* =========================================================
